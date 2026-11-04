@@ -6,5 +6,6 @@ import com.java.teamtask.connections.*;
 public class App {
   public static void main(String[] args) {
     SQL.createTables();
+    IsSystem.startApp();
   }
 }
