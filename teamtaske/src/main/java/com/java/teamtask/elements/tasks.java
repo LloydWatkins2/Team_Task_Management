@@ -32,16 +32,23 @@ public class tasks {
     this.commentsList = takeComment();
   }
 
-  public HashMap<users, takeComment() {
+  public HashMap<users, String> takeComment() {
     return SQL.getComments();
   }
-  public String viewTaskStatus(){}
-  public void updateTask(String taskName){}
-  public void updateTask(String taskDescription){}
-  public void updateTask(String taskStatus){}
-  public void updateTask(String taskLastUpdatedAt){}
-  public void updateTask(String taskCreatedAt){}
-  public void updateTask(users assginee){}
-  public void deleteTask(Task te){}
 
+  public String viewTaskStatus() {}
+
+  public void updateTask(String taskName) {}
+
+  public void updateTask(String taskDescription) {}
+
+  public void updateTask(String taskStatus) {}
+
+  public void updateTask(String taskLastUpdatedAt) {}
+
+  public void updateTask(String taskCreatedAt) {}
+
+  public void updateTask(users assginee) {}
+
+  public void deleteTask(int taskid) {}
 }

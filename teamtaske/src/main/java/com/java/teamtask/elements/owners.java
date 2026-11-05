@@ -2,74 +2,54 @@ package com.java.teamtask.elements;
 
 import java.util.*;
 
-public class owners implements projectsManage{
-    private users Users;
-    private projects Projects;
-    public Owner(user Users,project Projects) {
-        this.Users = Users;
-        this.Projects = Projects;
-    }
-    @Override
-    public void deleteMember(member Member) {
-        
-    }
-    @Override
-    public void addMember(users User) {
+public class owners implements projectsManage {
+  private users Users;
+  private projects Projects;
 
-    }
-    @Override
-    public void assignTask(member Member, tasks Task, List<Tasks> Tasks) {
-        
-    }
+  public Owner(users Users, projects Projects) {
+    this.Users = Users;
+    this.Projects = Projects;
+  }
 
-    @Override
-    public void unassignTask(member Member, tasks Task, List<Tasks> Tasks) {
-        
-    }
-    @Override
-    public void updateProject() {
-       
-    }
+  @Override
+  public void deleteMember(members Member) {}
 
-    @Override
-    public void deleteProject() {
-       
-    }
+  @Override
+  public void addMember(users User) {}
 
-    @Override
-    public void archiveProject() {
-        
-    }
+  @Override
+  public void assignTask(members Member, tasks Task, List<tasks> Tasks) {}
 
-    public String viewProjectInfo() {
-        
-    }
+  @Override
+  public void unassignTask(members Member, tasks Task, List<tasks> Tasks) {}
 
-    public Member[] viewMembers() {
-        
-    }
+  @Override
+  public void updateProject() {}
 
-    public String viewMemberInfo(member Member) {
-        
-    }
+  @Override
+  public void deleteProject() {}
 
-    public double viewOverallProgress() {
-        
-    }
+  @Override
+  public String viewProjectInfo() {}
 
-    public double viewMemberProgress(member Member) {
-        
-    }
+  @Override
+  public members[] viewMembers() {}
 
-    public String viewTask() {
-        
-    }
+  @Override
+  public String viewMemberInfo(members Member) {}
 
-    public String checkWork() {
-        
-    }
+  @Override
+  public double viewOverallProgress() {}
 
-    public String commentTasks(tasks Tasks, String comment) {
-        
-    }
+  @Override
+  public double viewMemberProgress(members Member) {}
+
+  @Override
+  public String viewTask() {}
+
+  @Override
+  public String checkWork() {}
+
+  @Override
+  public String commentTasks(tasks Tasks, String comment) {}
 }

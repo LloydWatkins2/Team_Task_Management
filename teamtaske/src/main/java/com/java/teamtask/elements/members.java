@@ -1,40 +1,34 @@
 package com.java.teamtask.elements;
 
-public class members implements seeProjects{
-    private users Users;
-    private projects Projects;
-    public Owner(user Users,project Projects) {
-        this.Users = Users;
-        this.Projects = Projects;
-    }
-    public String viewProjectInfo() {
-        
-    }
-    public Member[] viewMembers() {
-        
-    }
+public class members implements seeProjects {
+  private users Users;
+  private projects Projects;
 
-    public String viewMemberInfo(member Member) {
-        
-    }
-    public double viewOverallProgress() {
-        
-    }
-    public double viewMemberProgress(member Member) {
-        
-    }
-    
-    public String viewTask() {
-        
-    }
+  public members(user Users, project Projects) {
+    this.Users = Users;
+    this.Projects = Projects;
+  }
 
-    public String checkWork() {
-        
-    }
-    public String progressReport(){
-        
-    }
-    public String commentTasks(tasks Tasks, String comment) {
-        
-    }
+  @Override
+  public String viewProjectInfo() {}
+
+  @Override
+  public String viewMembers() {}
+
+  @Override
+  public Double viewOverrallProgress() {}
+
+  @Override
+  public Double viewMemberProgress(member k) {}
+
+  @Override
+  public String viewTask() {}
+
+  @Override
+  public String checkWork() {}
+
+  @Override
+  public void commentTask(tasks tk, String cmt) {}
+
+  public void viewMemberInfo() {}
 }
