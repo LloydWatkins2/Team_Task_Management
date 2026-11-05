@@ -58,6 +58,7 @@ com\java\teamtask\ui\theme\Icons.class
 com\java\teamtask\ui\MainFrame$ScrollableContent.class
 com\java\teamtask\ui\theme\Painters.class
 com\java\teamtask\ui\screens\DashboardScreen.class
+com\java\teamtask\elements\IsSystem.class
 com\java\teamtask\ui\theme\Typography$Weight.class
 com\java\teamtask\ui\MainFrame$1.class
 com\java\teamtask\ui\components\FormField$FieldControl.class
