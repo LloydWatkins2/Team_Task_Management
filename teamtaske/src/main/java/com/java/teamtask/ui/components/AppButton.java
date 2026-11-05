@@ -18,6 +18,7 @@ import java.awt.Dimension;
 import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Insets;
 import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
@@ -25,6 +26,9 @@ import java.awt.event.KeyEvent;
 /** Nút Taskia: primary gradient, outline, danger-outline. */
 public class AppButton extends JButton {
     public enum Variant { PRIMARY, OUTLINE, DANGER_OUTLINE }
+
+    private static final int BODY_HEIGHT = UiScale.px(48);
+    private static final int SHADOW_PAD = UiScale.px(18);
 
     private final Variant variant;
     private boolean block;
@@ -77,15 +81,26 @@ public class AppButton extends JButton {
     @Override
     public Dimension getPreferredSize() {
         Dimension d = super.getPreferredSize();
-        return new Dimension(d.width, UiScale.px(48));
+        return new Dimension(d.width, fullHeight());
     }
 
     @Override
     public Dimension getMaximumSize() {
         if (block) {
-            return new Dimension(Integer.MAX_VALUE, UiScale.px(48));
+            return new Dimension(Integer.MAX_VALUE, fullHeight());
         }
         return getPreferredSize();
+    }
+
+    @Override
+    public Insets getInsets() {
+        Insets insets = super.getInsets();
+        int extra = Math.max(0, getHeight() - BODY_HEIGHT);
+        return new Insets(insets.top, insets.left, insets.bottom + extra, insets.right);
+    }
+
+    private int fullHeight() {
+        return BODY_HEIGHT + SHADOW_PAD;
     }
 
     @Override
@@ -93,30 +108,31 @@ public class AppButton extends JButton {
         Graphics2D g2 = (Graphics2D) g.create();
         Painters.antialias(g2);
         int w = getWidth();
-        int h = getHeight();
-        int radius = h / 2;
+        int bodyHeight = Math.min(BODY_HEIGHT, getHeight());
+        int radius = bodyHeight / 2;
+        Rectangle body = new Rectangle(0, 0, w, bodyHeight);
         boolean hover = getModel().isRollover() && isEnabled();
 
         if (variant == Variant.PRIMARY) {
             if (isEnabled()) {
-                Shadows.paintPrimary(g2, new Rectangle(0, 0, w, h), radius);
+                Shadows.paintPrimary(g2, body, radius);
                 g2.setPaint(new GradientPaint(0, 0, Palette.PRIMARY_GRADIENT_TOP,
-                        0, h, Palette.PRIMARY_GRADIENT_BOTTOM));
-                g2.fill(Painters.roundRect(0, 0, w, h, radius));
+                        0, bodyHeight, Palette.PRIMARY_GRADIENT_BOTTOM));
+                g2.fill(Painters.roundRect(0, 0, w, bodyHeight, radius));
                 if (getModel().isArmed() && getModel().isPressed()) {
                     g2.setColor(Palette.PRESS_OVERLAY);
-                    g2.fill(Painters.roundRect(0, 0, w, h, radius));
+                    g2.fill(Painters.roundRect(0, 0, w, bodyHeight, radius));
                 }
             } else {
-                Painters.fill(g2, 0, 0, w, h, radius, Palette.PRIMARY_SOFT);
+                Painters.fill(g2, 0, 0, w, bodyHeight, radius, Palette.PRIMARY_SOFT);
             }
         } else {
             Color background = Palette.CARD;
             if (hover) {
                 background = variant == Variant.DANGER_OUTLINE ? Palette.DANGER_SOFT : Palette.NAV_HOVER;
             }
-            Painters.fill(g2, 0, 0, w, h, radius, background);
-            Painters.border(g2, 0, 0, w, h, radius,
+            Painters.fill(g2, 0, 0, w, bodyHeight, radius, background);
+            Painters.border(g2, 0, 0, w, bodyHeight, radius,
                     variant == Variant.DANGER_OUTLINE ? Palette.DANGER : Palette.TEXT, 1.5f);
         }
         g2.dispose();
@@ -126,7 +142,7 @@ public class AppButton extends JButton {
         if (isFocusOwner()) {
             Graphics2D focus = (Graphics2D) g.create();
             Painters.antialias(focus);
-            Painters.focusRing(focus, w, h, radius);
+            Painters.focusRing(focus, body, radius);
             focus.dispose();
         }
     }

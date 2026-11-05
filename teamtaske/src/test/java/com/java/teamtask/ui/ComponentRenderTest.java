@@ -11,13 +11,17 @@ import com.java.teamtask.ui.components.SearchField;
 import com.java.teamtask.ui.components.SelectableCard;
 import com.java.teamtask.ui.components.TaskCard;
 import com.java.teamtask.ui.theme.Palette;
+import com.java.teamtask.ui.theme.Space;
 import com.java.teamtask.ui.theme.Theme;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import javax.swing.JComponent;
+import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
+import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.util.HashSet;
@@ -26,6 +30,7 @@ import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Kiểm tra số đo và khả năng render của từng component cốt lõi. */
@@ -37,19 +42,56 @@ class ComponentRenderTest {
 
     @Test
     void componentsFollowSpecifiedMetrics() throws Exception {
-        Dimension button = onEdt(() -> new AppButton("Lưu", AppButton.Variant.PRIMARY).getPreferredSize());
+        Dimension primary = onEdt(() -> new AppButton("Lưu", AppButton.Variant.PRIMARY).getPreferredSize());
+        Dimension outline = onEdt(() -> new AppButton("Huỷ", AppButton.Variant.OUTLINE).getPreferredSize());
         Dimension nav = onEdt(() -> new NavItem("Tổng quan", "dashboard").getPreferredSize());
         Dimension search = onEdt(() -> new SearchField().getPreferredSize());
         Dimension iconButton = onEdt(() -> new IconButton("bell", "Thông báo").getPreferredSize());
         Dimension avatar = onEdt(() -> new Avatar("Nguyễn An").getPreferredSize());
         Dimension badge = onEdt(() -> new Badge("Đang làm", Badge.Kind.WARNING).getPreferredSize());
 
-        assertEquals(48, button.height);
+        assertEquals(66, primary.height);
+        assertEquals(66, outline.height);
         assertEquals(48, nav.height);
         assertEquals(48, search.height);
         assertEquals(new Dimension(48, 48), iconButton);
         assertEquals(new Dimension(48, 48), avatar);
         assertEquals(28, badge.height);
+    }
+
+    @Test
+    void primaryButtonShadowStaysBelowBodyAndInset() throws Exception {
+        AppButton primary = onEdt(() -> new AppButton("Lưu", AppButton.Variant.PRIMARY));
+        int width = 240;
+        int height = 66;
+        int bodyHeight = 48;
+        BufferedImage image = renderOnBackground(primary, width, height, Color.WHITE);
+
+        int white = Color.WHITE.getRGB();
+        assertNotEquals(white, image.getRGB(width / 2, bodyHeight + 6),
+                "Primary button phải có bóng ngay dưới thân 48px");
+
+        assertEquals(white, image.getRGB(0, 0), "Không có bóng ở góc trên-trái");
+        assertEquals(white, image.getRGB(width - 1, 0), "Không có bóng ở góc trên-phải");
+        assertEquals(white, image.getRGB(0, bodyHeight + 6), "Bóng không được chạm mép trái dưới thân");
+        assertEquals(white, image.getRGB(width - 1, bodyHeight + 6), "Bóng không được chạm mép phải dưới thân");
+    }
+
+    @Test
+    void flowLayoutAlignsButtonBodies() throws Exception {
+        int[] metrics = onEdt(() -> {
+            JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, Space.XS, 0));
+            AppButton primary = new AppButton("Lưu", AppButton.Variant.PRIMARY);
+            AppButton outline = new AppButton("Huỷ", AppButton.Variant.OUTLINE);
+            row.add(primary);
+            row.add(outline);
+            row.setSize(640, 120);
+            row.doLayout();
+            return new int[]{primary.getY(), outline.getY(), primary.getHeight(), outline.getHeight()};
+        });
+        assertEquals(metrics[0], metrics[1], "Hai nút phải cùng y trong FlowLayout");
+        assertEquals(66, metrics[2]);
+        assertEquals(66, metrics[3]);
     }
 
     @Test
@@ -85,7 +127,7 @@ class ComponentRenderTest {
         });
 
         int[][] sizes = {
-                {240, 80}, {200, 80}, {240, 48}, {400, 48}, {48, 48}, {48, 48}, {140, 28},
+                {240, 66}, {200, 66}, {240, 48}, {400, 48}, {48, 48}, {48, 48}, {140, 28},
                 {860, 120}, {400, 100}, {400, 360}
         };
         for (int i = 0; i < components.length; i++) {
@@ -132,12 +174,21 @@ class ComponentRenderTest {
     }
 
     private static BufferedImage render(JComponent component, int width, int height) throws Exception {
+        return renderOnBackground(component, width, height, null);
+    }
+
+    private static BufferedImage renderOnBackground(JComponent component, int width, int height,
+                                                    Color background) throws Exception {
         BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
         SwingUtilities.invokeAndWait(() -> {
             component.setSize(width, height);
             component.doLayout();
             Graphics2D g = image.createGraphics();
             try {
+                if (background != null) {
+                    g.setColor(background);
+                    g.fillRect(0, 0, width, height);
+                }
                 component.paint(g);
             } finally {
                 g.dispose();

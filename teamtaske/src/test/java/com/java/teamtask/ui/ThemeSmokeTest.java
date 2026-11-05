@@ -43,8 +43,9 @@ class ThemeSmokeTest {
     void scaleHelpersKeepLogicalPixels() {
         assertEquals(12, UiScale.px(12));
         assertEquals(18, UiScale.px(18));
-        assertEquals(12f, UiScale.font(16), 0.001f);
-        assertEquals(10.5f, Typography.body().getSize2D(), 0.001f);
+        assertEquals(13.5f, UiScale.font(16), 0.001f);
+        assertEquals(12.0f, Typography.body().getSize2D(), 0.001f);
+        assertEquals(10.5f, Typography.small().getSize2D(), 0.001f);
     }
 
     @Test

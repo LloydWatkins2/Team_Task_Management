@@ -1,10 +1,12 @@
 package com.java.teamtask.ui;
 
+import com.java.teamtask.ui.components.AppButton;
 import com.java.teamtask.ui.components.NavItem;
 import com.java.teamtask.ui.components.Sidebar;
 import com.java.teamtask.ui.screens.DashboardScreen;
 import com.java.teamtask.ui.screens.LoginScreen;
 import com.java.teamtask.ui.screens.TaskFormScreen;
+import com.java.teamtask.ui.theme.Space;
 import com.java.teamtask.ui.theme.Theme;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
@@ -92,6 +94,16 @@ class ShellLayoutTest {
             assertEquals(480, card.getPreferredSize().width);
             assertTrue(card.getPreferredSize().height > 400);
             assertEquals(login.getWidth() / 2, card.getX() + card.getWidth() / 2, 2);
+
+            AppButton submit = find(login, AppButton.class,
+                    button -> "Đăng nhập".equals(button.getText()));
+            assertNotNull(submit);
+            int contentWidth = card.getWidth() - Space.X4L * 2;
+            assertEquals(Space.X4L,
+                    SwingUtilities.convertPoint(submit, 0, 0, card).x,
+                    "Nội dung login phải căn trái tại card.x + 32");
+            assertEquals(contentWidth, submit.getWidth(),
+                    "Nút đăng nhập block phải phủ hết bề rộng nội dung 416px");
         } finally {
             SwingUtilities.invokeAndWait(frame::dispose);
         }

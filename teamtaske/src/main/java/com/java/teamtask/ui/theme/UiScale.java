@@ -4,6 +4,7 @@ package com.java.teamtask.ui.theme;
 public final class UiScale {
     /** Hệ số người dùng; tăng nếu muốn toàn bộ UI lớn hơn. */
     public static final float USER = 1.0f;
+    public static final float FONT_BOOST_PX = 2f;
 
     private UiScale() {
     }
@@ -13,8 +14,8 @@ public final class UiScale {
         return Math.round(cssPx * USER);
     }
 
-    /** Font: 1 CSS px = 0.75 pt ở 96 DPI. */
+    /** Font: 1 CSS px = 0.75 pt ở 96 DPI, cộng +2 CSS px boost. */
     public static float font(float cssPx) {
-        return cssPx * 0.75f * USER;
+        return (cssPx + FONT_BOOST_PX) * 0.75f * USER;
     }
 }

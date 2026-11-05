@@ -137,20 +137,21 @@ Quy ước:
 
 - `line-height: 1.5` chỉ áp dụng cho văn bản nhiều dòng. Swing không có line-height → dùng `JTextArea` không viền + `BorderFactory` đệm, hoặc HTML có kiểm soát.
 - `letter-spacing: -0.03em` (logo) và `-0.02em` (page title) → `TextAttribute.TRACKING` (`-0.03f`, `-0.02f`).
-- **Quy đổi px → pt:** `pt = px × 0.75` (1 CSS px = 0.75 pt ở 96 DPI). Tập trung trong `UiScale.font()` để đổi một chỗ nếu muốn chữ to hơn.
+- **Quy đổi px → pt:** `pt = (px + 2) × 0.75` (1 CSS px = 0.75 pt ở 96 DPI, cộng thêm 2 CSS px cho font). Tập trung trong `UiScale.font()` để đổi một chỗ nếu muốn chữ to hơn.
 - Kích thước layout (chiều cao nút, padding) giữ **logical px** đúng như CSS; Java 17 + FlatLaf tự nhân theo `uiScale`.
 
 ```java
 public final class UiScale {
     /** Hệ số người dùng, mặc định 1.0 — có thể tăng nếu cần chữ lớn hơn. */
     public static final float USER = 1.0f;
+    public static final float FONT_BOOST_PX = 2f;
 
     public static int px(float cssPx) {
         return Math.round(cssPx * USER);
     }
 
     public static float font(float cssPx) {
-        return cssPx * 0.75f * USER;
+        return (cssPx + FONT_BOOST_PX) * 0.75f * USER;
     }
 }
 ```
@@ -505,7 +506,7 @@ AppRootPanel  (nền gradient 135°, padding 28)
 | Page header margin-bottom | 24 |
 | Task list gap | 18 |
 | Task card | radius 24, padding 22 28, gap 24 |
-| Button | cao 48, padding 0 28, radius pill |
+| Button | body 48 + pad shadow dưới 18 = outer cao 66, padding 0 28, radius pill (outline/danger cũng giữ pad) |
 | Input | cao 52, padding 0 18 |
 | Field margin-bottom | 22 |
 | Badge | cao 28, padding 0 12, 12/700 |
@@ -608,6 +609,9 @@ addComponentListener(new ComponentAdapter() {
 public final class AppButton extends JButton {
     public enum Variant { PRIMARY, OUTLINE, DANGER_OUTLINE }
 
+    private static final int BODY_HEIGHT = UiScale.px(48);
+    private static final int SHADOW_PAD = UiScale.px(18);
+
     public AppButton(String text, Variant variant) {
         super(text);
         setFont(Typography.button());
@@ -616,31 +620,42 @@ public final class AppButton extends JButton {
         setBorderPainted(false);
         setBorder(new EmptyBorder(0, Space.X3L, 0, Space.X3L));
         setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        setPreferredSize(new Dimension(0, UiScale.px(48)));
         // màu chữ theo variant, icon gap 8
         setIconTextGap(Space.XS);
+    }
+
+    @Override public Dimension getPreferredSize() {
+        return new Dimension(super.getPreferredSize().width, BODY_HEIGHT + SHADOW_PAD);
+    }
+
+    @Override public Insets getInsets() {
+        Insets insets = super.getInsets();
+        int extra = Math.max(0, getHeight() - BODY_HEIGHT);
+        return new Insets(insets.top, insets.left, insets.bottom + extra, insets.right);
     }
 
     @Override protected void paintComponent(Graphics g) {
         Graphics2D g2 = (Graphics2D) g.create();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        int arc = getHeight();
+        int bodyHeight = Math.min(BODY_HEIGHT, getHeight());
+        int arc = bodyHeight;
         boolean pressed = getModel().isArmed() && getModel().isPressed();
-        if (pressed) { // scale 0.98 quanh tâm
-            g2.translate(getWidth() / 2.0, getHeight() / 2.0);
+        if (pressed) { // scale 0.98 quanh tâm body
+            g2.translate(getWidth() / 2.0, bodyHeight / 2.0);
             g2.scale(0.98, 0.98);
-            g2.translate(-getWidth() / 2.0, -getHeight() / 2.0);
+            g2.translate(-getWidth() / 2.0, -bodyHeight / 2.0);
         }
 
-        Shape shape = new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), arc, arc);
+        Rectangle body = new Rectangle(0, 0, getWidth(), bodyHeight);
+        Shape shape = new RoundRectangle2D.Float(0, 0, getWidth(), bodyHeight, arc, arc);
         switch (variant) {
             case PRIMARY -> {
                 if (isEnabled()) {
-                    Shadows.paint(g2, getBounds(), getHeight() / 2, Shadows.PRIMARY);
+                    Shadows.paintPrimary(g2, body, bodyHeight / 2);
                     g2.setPaint(new GradientPaint(
                             0, 0, Palette.PRIMARY_GRADIENT_TOP,
-                            0, getHeight(), Palette.PRIMARY_GRADIENT_BOTTOM));
+                            0, bodyHeight, Palette.PRIMARY_GRADIENT_BOTTOM));
                 } else {
                     g2.setColor(Palette.PRIMARY_SOFT);
                 }
@@ -661,7 +676,7 @@ public final class AppButton extends JButton {
         }
 
         if (isFocusOwner()) {
-            Painters.focusRing(g2, getBounds(), getHeight() / 2);
+            Painters.focusRing(g2, body, bodyHeight / 2);
         }
         g2.dispose();
         super.paintComponent(g);
@@ -671,7 +686,8 @@ public final class AppButton extends JButton {
 
 Quy tắc:
 
-- Cao 48; `block` = `setMaximumSize`/`setPreferredSize` full width (dùng `BoxLayout` hoặc `GridBagLayout`).
+- Outer cao 66 = body hiển thị 48 + pad trong suốt 18 phía dưới; outline/danger cũng giữ pad để hàng trộn căn đều; `block` = full width.
+- PRIMARY có shadow below-only, inset trong pad 18; body vẫn cao 48.
 - Nút primary luôn có icon trái (nếu có) + gap 8.
 - Không dùng nút primary quá 1 cái trong một vùng hành động.
 
@@ -1127,7 +1143,7 @@ Thứ tự ưu tiên khi thiếu thời gian: Phase 1 → 2 → 3 (chỉ các co
 | `outline: 3px` | `focusWidth`/`focusColor` hoặc vẽ ring thủ công |
 | `display:flex; gap` | `FlowLayout`, `BoxLayout`, `GridBagLayout` + `EmptyBorder`/`gap` |
 | `padding` | `EmptyBorder` |
-| `font-size` px | `Font.deriveFont(pt)` với `pt = px × 0.75` |
+| `font-size` px | `Font.deriveFont(pt)` với `pt = (px + 2) × 0.75` |
 | `line-height` | Không có; dùng `JTextArea` + padding hoặc HTML |
 | `letter-spacing` | `TextAttribute.TRACKING` |
 | `::after` (dot, ✓) | Vẽ trong `paintComponent` hoặc overlay `JLabel` |
