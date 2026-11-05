@@ -21,29 +21,26 @@ protected int userId;
     }
 
     public void deleteAccount() {
-        // Xóa tài khoản
+        
     }
 
     public void updateAccount() {
-        // Cập nhật thông tin tài khoản
+        
     }
 
     public Projects createProject() {
-        // Tạo project
-        return null;
+       
     }
 
     public List<Projects> viewProjects() {
-        // Lấy danh sách project
-        return null;
+       
     }
 
     public String viewProjectStatus(Projects project) {
-        // Xem trạng thái project
-        return null;
+        
     }
 
     public void action(Projects project) {
-        // Thực hiện hành động với project
+       
     }
 }
