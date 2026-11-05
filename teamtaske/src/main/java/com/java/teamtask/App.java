@@ -1,11 +1,20 @@
 package com.java.teamtask;
 
-import com.java.teamtask.connections.*;
+import com.java.teamtask.ui.MainFrame;
+import com.java.teamtask.ui.theme.Theme;
 
-/** Hello world! */
-public class App {
-  public static void main(String[] args) {
-    SQL.createTables();
-    IsSystem.startApp();
-  }
+import javax.swing.SwingUtilities;
+
+/** Điểm vào ứng dụng Taskia. */
+public final class App {
+    private App() {
+    }
+
+    public static void main(String[] args) {
+        Theme.install();
+        SwingUtilities.invokeLater(() -> {
+            MainFrame frame = new MainFrame();
+            frame.setVisible(true);
+        });
+    }
 }

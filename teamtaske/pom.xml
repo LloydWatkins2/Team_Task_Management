@@ -38,6 +38,18 @@
       <version>3.54.1.0</version>
     </dependency>
 
+    <!-- FlatLaf: Look & Feel hiện đại, bo góc, focus ring, SVG icon -->
+    <dependency>
+      <groupId>com.formdev</groupId>
+      <artifactId>flatlaf</artifactId>
+      <version>3.8</version>
+    </dependency>
+    <dependency>
+      <groupId>com.formdev</groupId>
+      <artifactId>flatlaf-extras</artifactId>
+      <version>3.8</version>
+    </dependency>
+
     <!-- JUnit 5 -->
     <dependency>
       <groupId>org.junit.jupiter</groupId>
