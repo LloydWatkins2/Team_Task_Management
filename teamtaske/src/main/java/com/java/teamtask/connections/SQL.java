@@ -7,13 +7,12 @@ import java.util.ArrayList;
 
 /** sql */
 public class SQL {
-  public static HikariDataSource connectionsPoolInit() {
+  public static HikariDataSource connectionsPoolInit(String url, String username, String password) {
+
     HikariConfig config = new HikariConfig();
-    String URL =
-        "jdbc:postgresql://gpjava1-2-3-csdl.h.aivencloud.com:11544/defaultdb?sslmode=require";
-    config.setJdbcUrl(URL);
-    config.setUsername("avnadmin");
-    config.setPassword("AVNS_ZBhao2wqxSjDllsGn8p");
+    config.setJdbcUrl(url);
+    config.setUsername(username);
+    config.setPassword(password);
 
     config.setMaximumPoolSize(10);
     config.setIdleTimeout(30000);

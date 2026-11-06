@@ -2,9 +2,9 @@ package com.java.teamtask;
 
 import com.java.teamtask.connections.SQL;
 import com.zaxxer.hikari.HikariDataSource;
+import io.github.cdimascio.dotenv.Dotenv;
 import java.sql.SQLException;
 
-/** Điểm vào ứng dụng Taskia. */
 public final class App {
   private App() {}
 
@@ -15,7 +15,11 @@ public final class App {
     //       MainFrame frame = new MainFrame();
     //       frame.setVisible(true);
     //     });
-    HikariDataSource dataSource = SQL.connectionsPoolInit();
+    Dotenv dotenv = Dotenv.load();
+    String url = dotenv.get("url");
+    String username = dotenv.get("DB_USER");
+    String password = dotenv.get("DB_PASSWORD");
+    HikariDataSource dataSource = SQL.connectionsPoolInit(url, username, password);
     SQL.createTables(dataSource.getConnection());
   }
 }
