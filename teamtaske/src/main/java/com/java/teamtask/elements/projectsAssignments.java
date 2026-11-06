@@ -15,9 +15,15 @@ public class projectsAssignments {
     this.role = r;
   }
 
-  public String getRole() {}
+  public String getRole() {
+    return this.role;
+  }
 
-  public users getUser() {}
+  public users getUser() { // dùng để truy cập thuộc tính
+    return this.user;
+  }
 
-  public projects getProject() {}
+  public projects getProject() { // dùng để truy cập thuộc tính
+    return this.project;
+  }
 }

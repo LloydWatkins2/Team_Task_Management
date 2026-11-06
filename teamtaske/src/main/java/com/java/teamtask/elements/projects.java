@@ -23,17 +23,29 @@ public class projects {
     this.tasksList = list;
   }
 
-  public String getName() {}
+  public String getName() {
+    return this.name;
+  }
   
-  public String getDes() {}
+  public String getDes() {
+    return this.description;
+  }
 
-  public String getDL() {}
+  public String getDL() {
+    return this.deadline;
+  }
 
-  public String getCreateTime() {}
+  public String getCreateTime() {
+    return this.createdAt;
+  }
 
-  public String getUpdateTime() {}
+  public String getUpdateTime() {
+    return this.lastUpdatedAt;
+  }
 
-  public ArrayList<tasks> getTasksList() {}
+  public ArrayList<tasks> getTasksList() {
+    return this.tasksList;
+  }
 
   public void addTasks(int taskId) {}
 
