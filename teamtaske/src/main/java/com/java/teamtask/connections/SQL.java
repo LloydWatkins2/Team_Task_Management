@@ -1,65 +1,86 @@
 package com.java.teamtask.connections;
 
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import java.sql.*;
 import java.util.ArrayList;
 
 /** sql */
 public class SQL {
-  public static void createTables() {
-    String url = "jdbc:sqlite:teamtask.db";
-    try (Connection conn = DriverManager.getConnection(url)) {
+  public static HikariDataSource connectionsPoolInit() {
+    HikariConfig config = new HikariConfig();
+    String URL =
+        "jdbc:postgresql://gpjava1-2-3-csdl.h.aivencloud.com:11544/defaultdb?sslmode=require";
+    config.setJdbcUrl(URL);
+    config.setUsername("avnadmin");
+    config.setPassword("AVNS_ZBhao2wqxSjDllsGn8p");
+
+    config.setMaximumPoolSize(10);
+    config.setIdleTimeout(30000);
+    config.setMaxLifetime(1800000);
+
+    return new HikariDataSource(config);
+  }
+
+  public static void createTables(Connection conn) {
+    try (conn) {
       if (conn != null) {
         ArrayList<String> tabs = new ArrayList<>();
         tabs.add(
-            "create table if not exists users (\n"
-                + "id INT auto_increment primary key, \n"
-                + "lname varchar(30) not null,\n"
-                + "fname varchar(20) not null,\n"
-                + "username varchar(30) not null ,\n"
-                + "password varchar(20) not null,\n"
-                + "gmail varchar(30) not null,\n"
-                + "phone varchar(15),\n"
-                + "dob DATE"
+            "CREATE TABLE IF NOT EXISTS users (\n"
+                + "id BIGSERIAL PRIMARY KEY,\n"
+                + "lname VARCHAR(30) NOT NULL,\n"
+                + "fname VARCHAR(20) NOT NULL,\n"
+                + "username VARCHAR(30) NOT NULL,\n"
+                + "password VARCHAR(255) NOT NULL,\n"
+                + "gmail VARCHAR(30) NOT NULL,\n"
+                + "phone VARCHAR(15),\n"
+                + "dob DATE\n"
                 + ");");
+
         tabs.add(
-            "create table if not exists Projects (\n"
-                + "Projectid INT auto_increment primary key, \n"
-                + "Name TEXT not null,\n"
-                + "Description TEXT not null,\n"
-                + "Deadline DATETIME not null ,\n"
-                + "Create_at DATETIME not null,\n"
-                + "Update_at DATETIME not null\n"
+            "CREATE TABLE IF NOT EXISTS Projects (\n"
+                + "Projectid BIGSERIAL PRIMARY KEY,\n"
+                + "Name TEXT NOT NULL,\n"
+                + "Description TEXT NOT NULL,\n"
+                + "Deadline TIMESTAMP NOT NULL,\n"
+                + "Create_at TIMESTAMP NOT NULL,\n"
+                + "Update_at TIMESTAMP NOT NULL\n"
                 + ");");
+
         tabs.add(
-            "create table if not exists ProjectsAssgiments (\n"
-                + "user_id INT , \n"
-                + "Project_id INT , \n"
-                + "role TEXT default member, \n"
-                + "foreign key (user_id) references users(id), \n"
-                + "foreign key (Project_id) references Projects(Projectid), \n"
-                + "primary key(user_id,Project_id)\n"
+            "CREATE TABLE IF NOT EXISTS ProjectsAssgiments (\n"
+                + "user_id BIGINT NOT NULL,\n"
+                + "Project_id BIGINT NOT NULL,\n"
+                + "role TEXT DEFAULT 'member',\n"
+                + "FOREIGN KEY (user_id) REFERENCES users(id),\n"
+                + "FOREIGN KEY (Project_id) REFERENCES Projects(Projectid),\n"
+                + "PRIMARY KEY(user_id, Project_id)\n"
                 + ");");
+
         tabs.add(
-            "create table if not exists Tasks (\n"
-                + "taskid INT auto_increment primary key, \n"
-                + "taskName TEXT not null,\n"
-                + "taskDescription TEXT not null,\n"
-                + "taskDeadline DATETIME not null ,\n"
-                + "taskStatus DATETIME not null,\n"
-                + "taskCreatedAt DATETIME not null,\n"
-                + "taskLastUpdatedAt DATETIME not null,\n"
-                + "user_id INT not null,\n"
-                + "Project_id INT not null,\n"
-                + "foreign key (user_id) references users(id), \n"
-                + "foreign key (Project_id) references Projects(Projectid) \n"
+            "CREATE TABLE IF NOT EXISTS Tasks (\n"
+                + "taskid BIGSERIAL PRIMARY KEY,\n"
+                + "taskName TEXT NOT NULL,\n"
+                + "taskDescription TEXT NOT NULL,\n"
+                + "taskDeadline TIMESTAMP NOT NULL,\n"
+                + "taskStatus VARCHAR(20) NOT NULL DEFAULT 'pending',\n"
+                + "taskCreatedAt TIMESTAMP NOT NULL,\n"
+                + "taskLastUpdatedAt TIMESTAMP NOT NULL,\n"
+                + "user_id BIGINT NOT NULL,\n"
+                + "Project_id BIGINT NOT NULL,\n"
+                + "FOREIGN KEY (user_id) REFERENCES users(id),\n"
+                + "FOREIGN KEY (Project_id) REFERENCES Projects(Projectid)\n"
                 + ");");
+
         tabs.add(
-            "create table if not exists Comments (\n"
-                + "taskid INT auto_increment primary key, \n"
-                + "fromwhom INT not null,\n"
-                + "commentdetail TEXT not null,\n"
-                + "foreign key (taskid) references Tasks(taskid), \n"
-                + "foreign key (fromwhom) references users(id) \n"
+            "CREATE TABLE IF NOT EXISTS Comments (\n"
+                + "commentid BIGSERIAL PRIMARY KEY,\n"
+                + "taskid BIGINT NOT NULL,\n"
+                + "fromwhom BIGINT NOT NULL,\n"
+                + "commentdetail TEXT NOT NULL,\n"
+                + "FOREIGN KEY (taskid) REFERENCES Tasks(taskid),\n"
+                + "FOREIGN KEY (fromwhom) REFERENCES users(id)\n"
                 + ");");
         for (String sql : tabs) {
           try (Statement st = conn.createStatement()) {

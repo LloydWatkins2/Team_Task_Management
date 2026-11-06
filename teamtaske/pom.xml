@@ -33,12 +33,21 @@
   <dependencies>
     <!-- JDBC driver cho SQLite (Swing có sẵn trong JDK, không cần khai báo) -->
     <dependency>
-      <groupId>org.xerial</groupId>
-      <artifactId>sqlite-jdbc</artifactId>
-      <version>3.54.1.0</version>
+      <groupId>com.zaxxer</groupId>
+      <artifactId>HikariCP</artifactId>
+      <version>6.3.3</version>
     </dependency>
-
-    <!-- FlatLaf: Look & Feel hiện đại, bo góc, focus ring, SVG icon -->
+    <dependency>
+      <groupId>org.xerial</groupId>
+        <artifactId>sqlite-jdbc</artifactId>
+        <version>3.54.1.0</version>
+    </dependency>
+    <dependency>
+        <groupId>org.postgresql</groupId>
+        <artifactId>postgresql</artifactId>
+        <version>42.7.4</version>
+    </dependency>
+        <!-- FlatLaf: Look & Feel hiện đại, bo góc, focus ring, SVG icon -->
     <dependency>
       <groupId>com.formdev</groupId>
       <artifactId>flatlaf</artifactId>
