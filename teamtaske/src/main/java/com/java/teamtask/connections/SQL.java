@@ -166,7 +166,7 @@ public class SQL {
           ans.put(
               p,
               new projectsAssignments(
-                  user, p, assignAt == null ? null : assignAt.toString(), rs.getString("role")));
+                  user, p, assignAt == null ? null : assignAt, rs.getString("role")));
         }
       }
 

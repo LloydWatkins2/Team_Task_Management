@@ -1,14 +1,15 @@
 package com.java.teamtask.elements;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 public class projectsAssignments {
   protected users user;
   protected projects project;
-  protected String assignedAt;
+  protected LocalDateTime assignedAt;
   protected String role;
 
-  public projectsAssignments(users u, projects p, String aa, String r) {
+  public projectsAssignments(users u, projects p, LocalDateTime aa, String r) {
     this.user = u;
     this.project = p;
     this.assignedAt = aa;

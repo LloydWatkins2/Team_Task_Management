@@ -1,12 +1,12 @@
 package com.java.teamtask.elements;
 
 public class members implements seeProjects {
-  private users Users;
-  private projects Projects;
+  private users User;
+  private projects Project;
 
-  public members(user Users, project Projects) {
-    this.Users = Users;
-    this.Projects = Projects;
+  public members(users User, projects Project) {
+    this.User = User;
+    this.Project = Project;
   }
 
   @Override

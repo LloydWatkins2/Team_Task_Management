@@ -1,6 +1,7 @@
 package com.java.teamtask.elements;
 
 import java.sql.*;
+import java.time.LocalDateTime;
 import java.util.*;
 
 public class users {
@@ -72,17 +73,42 @@ public class users {
     return this.relatedProjects;
   }
 
-  public boolean deleteAccount(Connection conn) {}
+  public void deleteAccount(Connection conn, users User) {
+    String sql = "DELETE FROM users WHERE id = ?";
+    try (conn;
+    PreparedStatement del = conn.prepareStatement(sql)){
+      del.setLong(1, User.userId);
+      del.executeUpdate();
+    }
+    catch (Exception e) {
+      System.out.println("Lỗi xóa" + e);
+    }
+  }
 
-  public void updateAccount() {}
+  public void updateAccount(Connection conn, users User) {
+    String sql = "UPDATE users SET lname = ?, fname = ?, email = ?, password = ? WHERE id = ?";
+    try (conn;
+    PreparedStatement upt = conn.prepareStatement(sql)){
+      upt.setString(1, User.lname);
+      upt.setString(2, User.fname);
+      upt.setString(3, User.email);
+      upt.setString(4, User.password);
+      upt.setLong(5, User.userId);
+      upt.executeUpdate();
+    }
+    catch (Exception e) {
+      System.out.println("Lỗi cập nhật" + e);
+    }
+  }
 
   public projects createProject(
       Connection conn,
+      users User,
       String n,
       String des,
-      String dl,
-      String ca,
-      String up,
+      LocalDateTime dl,
+      LocalDateTime ca,
+      LocalDateTime up,
       ArrayList<tasks> list) {
     String insertProjectSql =
         "INSERT INTO Projects(Name, Description, Deadline, Create_at, Update_at) VALUES(?, ?, ?,?,"
@@ -114,7 +140,7 @@ public class users {
 
         projects project = new projects(n, des, dl, ca, up, list);
         project.id = projectId;
-        projectsAssignments assignment = new projectsAssignments(this, project, ca, "owner");
+        projectsAssignments assignment = new projectsAssignments(User, project, ca, "owner");
 
         if (this.relatedProjects == null) {
           this.relatedProjects = new HashMap<>();
@@ -175,7 +201,14 @@ public class users {
     return Projects;
   }
 
-  public String viewProjectStatus(projects project) {}
+  public Double viewProjectStatus(projects project) {
+    int goal = project.tasksList.size();
+    int cnt = 0;
+    for (tasks t : project.tasksList) {
+      if (t.taskStatus == "Hoàn thành") cnt += 1;
+    }
+    return (double) (cnt / goal);
+  }
 
   public void action(projects project) {
     projectsAssignments assignment = this.relatedProjects.get(project);

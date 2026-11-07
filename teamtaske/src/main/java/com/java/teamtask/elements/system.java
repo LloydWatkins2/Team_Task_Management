@@ -146,5 +146,13 @@ public class system {
     return false;
   }
 
-  public void action(users currentuser, projects project) {}
+  public static seeProjects roleChecker(projectsAssignments projas, users User, projects Project) {
+    String role = projas.role;
+    if (role == "owner") {
+      return new owners(User, Project);
+    }
+    return new members(User, Project);
+  }
+  // bảo opencode làm phần này
+  // public void action(users currentuser, projects project) {}
 }
