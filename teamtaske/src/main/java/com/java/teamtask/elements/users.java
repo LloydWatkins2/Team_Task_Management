@@ -21,9 +21,19 @@ public class users {
 
   public void updateAccount() {}
 
-  public projects createProject() {}
+  public projects createProject(
+    String n,
+    String des,
+    String dl,
+    String ca,
+    String up,
+    ArrayList<tasks> list
+  ) {
+    projects Project = new projects(n, des, dl, ca, up, list);
+    return Project;
+  }
 
-  public List<projects> viewProjects() {}
+  public ArrayList<projects> viewProjects() {}
 
   public String viewProjectStatus(projects project) {}
 

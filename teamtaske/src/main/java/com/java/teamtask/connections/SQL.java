@@ -60,8 +60,7 @@ public class SQL {
         tabs.add(
             "CREATE TABLE IF NOT EXISTS Tasks (\n"
                 + "taskid BIGSERIAL PRIMARY KEY,\n"
-                + "taskName TEXT NOT NULL,\n"
-                + "taskDescription TEXT NOT NULL,\n"
+                + "taskName TEXT NOT NULL,\n" + "taskDescription TEXT NOT NULL,\n"
                 + "taskDeadline TIMESTAMP NOT NULL,\n"
                 + "taskStatus VARCHAR(20) NOT NULL DEFAULT 'pending',\n"
                 + "taskCreatedAt TIMESTAMP NOT NULL,\n"
