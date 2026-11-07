@@ -145,4 +145,6 @@ public class system {
     }
     return false;
   }
+
+  public void action(users currentuser, projects project) {}
 }
