@@ -128,6 +128,7 @@ public class users {
     return null;
   }
 
+<<<<<<< HEAD
   public boolean deleteProject(Connection conn, projects project) {
     projectsAssignments assignment = this.relatedProjects.get(project);
     if (assignment == null) {
@@ -172,6 +173,11 @@ public class users {
 
   public ArrayList<projects> viewProjects() {
     return new ArrayList<>(this.relatedProjects.keySet());
+=======
+  public ArrayList<projects> viewProjects() { // chỉ xem thông tin cơ bản
+    ArrayList<projects> Projects = new ArrayList<>(this.relatedProjects.keySet());
+    return Projects;
+>>>>>>> view-and-check
   }
 
   public String viewProjectStatus(projects project) {}
