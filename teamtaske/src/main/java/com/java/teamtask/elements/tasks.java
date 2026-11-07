@@ -2,13 +2,14 @@ package com.java.teamtask.elements;
 
 import com.java.teamtask.connections.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 /** tasks */
 public class tasks {
   protected int taskid;
   protected String taskName, taskDescription, taskStatus;
-  protected LocalDateTime taskCreatedAt, taskLastUpdatedAt;
+  protected LocalDateTime taskCreatedAt, taskLastUpdatedAt, taskDL;
   public users assginee;
   public HashMap<users, String> commentsList;
 
@@ -32,23 +33,47 @@ public class tasks {
     this.commentsList = takeComment();
   }
 
-  public HashMap<users, String> takeComment() {
+  public HashMap<members, String> takeComment() {
     return SQL.getComments();
   }
 
-  public String viewTaskStatus() {}
+  public String viewTaskStatus() {
+    return this.taskStatus;
+  }
 
-  public void updateTask(String taskName) {}
+  public ArrayList<String> updatetask(
+      String taskName, String taskStatus, String taskDescription, String taskDL) {
+    ArrayList<String> ans = new ArrayList<>();
+    if (taskName != "") {
+      this.taskName = taskName;
+      ans.add(taskName);
+    } else {
+      ans.add(this.taskName);
+    }
 
-  public void updateTask(String taskDescription) {}
-
-  public void updateTask(String taskStatus) {}
-
-  public void updateTask(String taskLastUpdatedAt) {}
-
-  public void updateTask(String taskCreatedAt) {}
-
-  public void updateTask(users assginee) {}
+    ans.add(this.taskCreatedAt.toString());
+    this.taskLastUpdatedAt = LocalDateTime.now();
+    ans.add(this.taskLastUpdatedAt.toString());
+    if (taskDL != "") {
+      this.taskDL = LocalDateTime.parse(taskDL);
+      ans.add(taskDL);
+    } else {
+      ans.add(this.taskDL.toString());
+    }
+    if (taskStatus != "") {
+      this.taskStatus = taskStatus;
+      ans.add(taskStatus);
+    } else {
+      ans.add(this.taskStatus);
+    }
+    if (taskDescription != "") {
+      this.taskName = taskDescription;
+      ans.add(taskDescription);
+    } else {
+      ans.add(this.taskDescription);
+    }
+    return ans;
+  }
 
   public void deleteTask(int taskid) {}
 }

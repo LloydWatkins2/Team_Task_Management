@@ -8,7 +8,7 @@ public interface seeProjects {
 
   public abstract Double viewOverrallProgress();
 
-  public abstract Double viewMemberProgress(member k);
+  public abstract Double viewMemberProgress(members k);
 
   public abstract String viewTask();
 
