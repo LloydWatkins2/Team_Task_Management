@@ -33,7 +33,10 @@ public class users {
     return Project;
   }
 
-  public ArrayList<projects> viewProjects() {}
+  public ArrayList<projects> viewProjects() { // chỉ xem thông tin cơ bản
+    ArrayList<projects> Projects = new ArrayList<>(this.relatedProjects.keySet());
+    return Projects;
+  }
 
   public String viewProjectStatus(projects project) {}
 
