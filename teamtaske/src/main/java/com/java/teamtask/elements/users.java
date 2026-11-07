@@ -131,9 +131,26 @@ public class users {
     return false;
   }
   
-  public ArrayList<projects> viewProjects() {}
+  public ArrayList<projects> viewProjects() {
+      return new ArrayList<>(this.relatedProjects.keySet());
+  }
 
   public String viewProjectStatus(projects project) {}
 
-  public void action(projects project) {}
+  public void action(projects project) {
+      projectsAssignments assignment = this.relatedProjects.get(project);
+      if(assignment == null){
+          System.out.println("Bạn không thuộc dự án này.");
+          return;
+      }
+      if("owner".equalsIgnoreCase(assignment.getRole())){
+          owners ownerAction = new owners(this, project);
+          ownerAction.viewProjectInfo();
+          ownerAction.viewMembers();
+      }
+      else{
+          members memberAction = new members(this, project);
+          memberAction.viewProjectInfo();
+      }
+  }
 }
