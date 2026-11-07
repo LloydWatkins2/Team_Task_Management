@@ -18,17 +18,15 @@ public class tasks {
       String taskName,
       String taskDescription,
       String taskStatus,
-      String taskCreatedAt,
-      String taskLastUpdatedAt,
+      LocalDateTime taskCreatedAt,
+      LocalDateTime taskLastUpdatedAt,
       users assginee) {
     this.taskid = taskid;
     this.taskName = taskName;
     this.taskDescription = taskDescription;
     this.taskStatus = taskStatus;
-    this.taskCreatedAt =
-        taskCreatedAt == "" ? LocalDateTime.now() : LocalDateTime.parse(taskCreatedAt);
-    this.taskLastUpdatedAt =
-        taskLastUpdatedAt == "" ? LocalDateTime.now() : LocalDateTime.parse(taskLastUpdatedAt);
+    this.taskCreatedAt = taskCreatedAt == null ? LocalDateTime.now() : taskCreatedAt;
+    this.taskLastUpdatedAt = taskLastUpdatedAt == null ? LocalDateTime.now() : taskLastUpdatedAt;
     this.assginee = assginee;
     this.commentsList = takeComment();
   }

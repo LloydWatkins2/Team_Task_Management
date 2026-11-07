@@ -1,9 +1,12 @@
 package com.java.teamtask.connections;
 
+import com.java.teamtask.elements.*;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import java.sql.*;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 /** sql */
 public class SQL {
@@ -34,12 +37,12 @@ public class SQL {
                 + "password VARCHAR(255) NOT NULL,\n"
                 + "gmail VARCHAR(30) NOT NULL,\n"
                 + "phone VARCHAR(15),\n"
-                + "dob DATE\n"
+                + "dob TEXT\n"
                 + ");");
 
         tabs.add(
             "CREATE TABLE IF NOT EXISTS Projects (\n"
-                + "Projectid BIGSERIAL PRIMARY KEY,\n"
+                + "Project_id BIGSERIAL PRIMARY KEY,\n"
                 + "Name TEXT NOT NULL,\n"
                 + "Description TEXT NOT NULL,\n"
                 + "Deadline TIMESTAMP NOT NULL,\n"
@@ -52,6 +55,7 @@ public class SQL {
                 + "user_id BIGINT NOT NULL,\n"
                 + "Project_id BIGINT NOT NULL,\n"
                 + "role TEXT DEFAULT 'member',\n"
+                + "assignat TIMESTAMP,\n"
                 + "FOREIGN KEY (user_id) REFERENCES users(id),\n"
                 + "FOREIGN KEY (Project_id) REFERENCES Projects(Projectid),\n"
                 + "PRIMARY KEY(user_id, Project_id)\n"
@@ -60,7 +64,8 @@ public class SQL {
         tabs.add(
             "CREATE TABLE IF NOT EXISTS Tasks (\n"
                 + "taskid BIGSERIAL PRIMARY KEY,\n"
-                + "taskName TEXT NOT NULL,\n" + "taskDescription TEXT NOT NULL,\n"
+                + "taskName TEXT NOT NULL,\n"
+                + "taskDescription TEXT NOT NULL,\n"
                 + "taskDeadline TIMESTAMP NOT NULL,\n"
                 + "taskStatus VARCHAR(20) NOT NULL DEFAULT 'pending',\n"
                 + "taskCreatedAt TIMESTAMP NOT NULL,\n"
@@ -80,8 +85,8 @@ public class SQL {
                 + "FOREIGN KEY (taskid) REFERENCES Tasks(taskid),\n"
                 + "FOREIGN KEY (fromwhom) REFERENCES users(id)\n"
                 + ");");
-        for (String sql : tabs) {
-          try (Statement st = conn.createStatement()) {
+        try (Statement st = conn.createStatement()) {
+          for (String sql : tabs) {
             st.execute(sql);
             System.out.println("created table user");
           }
@@ -89,6 +94,91 @@ public class SQL {
       }
     } catch (Exception e) {
       System.out.println("Loi db " + e);
+    }
+  }
+
+  public static HashMap<projects, projectsAssignments> selectRelatedProject(
+      Connection conn, users user) {
+    String projectSql =
+        "SELECT p.Projectid, p.Name, p.Description, p.Deadline, p.Create_at, p.Update_at, "
+            + "pa.role, pa.assignat "
+            + "FROM Projects p "
+            + "JOIN ProjectsAssgiments pa ON p.Projectid = pa.Project_id "
+            + "WHERE pa.user_id = ?";
+
+    String taskSql =
+        "SELECT t.taskid, t.taskName, t.taskDescription, t.taskStatus, "
+            + "t.taskCreatedAt, t.taskLastUpdatedAt, "
+            + "u.id AS uid, u.lname, u.fname, u.username, u.password, u.gmail, u.phone, u.dob "
+            + "FROM Tasks t "
+            + "JOIN users u ON t.user_id = u.id "
+            + "WHERE t.Project_id = ?";
+
+    try (conn;
+        PreparedStatement getProject = conn.prepareStatement(projectSql);
+        PreparedStatement getTask = conn.prepareStatement(taskSql)) {
+
+      HashMap<projects, projectsAssignments> ans = new HashMap<>();
+      getProject.setLong(1, user.userId);
+
+      try (ResultSet rs = getProject.executeQuery()) {
+        while (rs.next()) {
+          long projectId = rs.getLong("Projectid");
+
+          // Lấy danh sách task của project này
+          ArrayList<tasks> list = new ArrayList<>();
+          getTask.setLong(1, projectId);
+          try (ResultSet rst = getTask.executeQuery()) {
+            while (rst.next()) {
+              users assignee =
+                  new users(
+                      rst.getInt("uid"),
+                      rst.getString("lname"),
+                      rst.getString("fname"),
+                      rst.getString("password"),
+                      rst.getString("gmail"),
+                      rst.getString("phone"),
+                      rst.getString("dob"));
+
+              list.add(
+                  new tasks(
+                      rst.getInt("taskid"),
+                      rst.getString("taskName"),
+                      rst.getString("taskDescription"),
+                      rst.getString("taskStatus"),
+                      rst.getObject("taskCreatedAt", LocalDateTime.class),
+                      rst.getObject("taskLastUpdatedAt", LocalDateTime.class),
+                      assignee));
+            }
+          }
+
+          projects p =
+              new projects(
+                  (int) projectId,
+                  rs.getString("Name"),
+                  rs.getString("Description"),
+                  rs.getObject("Deadline", LocalDateTime.class),
+                  rs.getObject("Create_at", LocalDateTime.class),
+                  rs.getObject("Update_at", LocalDateTime.class),
+                  list);
+
+          LocalDateTime assignAt = rs.getObject("assignat", LocalDateTime.class);
+          ans.put(
+              p,
+              new projectsAssignments(
+                  user, p, assignAt == null ? null : assignAt.toString(), rs.getString("role")));
+        }
+      }
+
+      if (ans.isEmpty()) {
+        System.out.println("no project created");
+        return null;
+      }
+      return ans;
+
+    } catch (Exception e) {
+      System.out.println("loi truy van: " + e);
+      return null;
     }
   }
 }

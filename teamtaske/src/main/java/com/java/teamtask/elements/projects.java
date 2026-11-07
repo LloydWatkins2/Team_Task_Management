@@ -1,6 +1,8 @@
 package com.java.teamtask.elements;
 
+import java.time.LocalDateTime;
 import java.util.*;
+
 // import java.sql.*;
 // import java.time.LocalDateTime;
 
@@ -8,19 +10,35 @@ public class projects {
   protected int id = 0;
   protected String name;
   protected String description;
-  protected String deadline;
-  protected String createdAt;
-  protected String lastUpdatedAt;
+  protected LocalDateTime deadline;
+  protected LocalDateTime createdAt;
+  protected LocalDateTime lastUpdatedAt;
   protected ArrayList<tasks> tasksList = new ArrayList<>();
 
   public projects(
-    String n,
-    String des,
-    String dl,
-    String ca,
-    String up,
-    ArrayList<tasks> list
-  ) {
+      String n,
+      String des,
+      LocalDateTime dl,
+      LocalDateTime ca,
+      LocalDateTime up,
+      ArrayList<tasks> list) {
+    this.name = n;
+    this.description = des;
+    this.deadline = dl;
+    this.createdAt = ca;
+    this.lastUpdatedAt = up;
+    this.tasksList = (list != null) ? list : new ArrayList<>();
+  }
+
+  public projects(
+      int projectsid,
+      String n,
+      String des,
+      LocalDateTime dl,
+      LocalDateTime ca,
+      LocalDateTime up,
+      ArrayList<tasks> list) {
+    this.id = projectsid;
     this.name = n;
     this.description = des;
     this.deadline = dl;
@@ -32,7 +50,7 @@ public class projects {
   public String getName() {
     return this.name;
   }
-  
+
   public String getDes() {
     return this.description;
   }
