@@ -12,7 +12,7 @@ import java.util.HashMap;
 public class tasks {
   protected int taskid;
   protected String taskName, taskDescription, taskStatus;
-  protected LocalDateTime taskCreatedAt, taskLastUpdatedAt, taskDL;
+  protected LocalDateTime taskCreatedAt, taskLastUpdatedAt, taskDeadline;
   public users assginee;
   public HashMap<users, String> commentsList;
 
@@ -23,14 +23,17 @@ public class tasks {
       String taskStatus,
       LocalDateTime taskCreatedAt,
       LocalDateTime taskLastUpdatedAt,
+      LocalDateTime taskDeadline,
       users assginee,
       Connection conn) {
+
     this.taskid = taskid;
     this.taskName = taskName;
     this.taskDescription = taskDescription;
     this.taskStatus = taskStatus;
     this.taskCreatedAt = taskCreatedAt == null ? LocalDateTime.now() : taskCreatedAt;
     this.taskLastUpdatedAt = taskLastUpdatedAt == null ? LocalDateTime.now() : taskLastUpdatedAt;
+    this.taskDeadline = taskDeadline;
     this.assginee = assginee;
     this.commentsList = takeComment(conn);
   }
@@ -83,12 +86,12 @@ public class tasks {
         PreparedStatement upt = conn.prepareStatement(sql)) {
       upt.setString(1, tk.taskName);
       upt.setString(2, tk.taskDescription);
-      upt.setTimestamp(3, Timestamp.valueOf(tk.taskDL));
+      upt.setTimestamp(3, Timestamp.valueOf(tk.taskDeadline));
       upt.setString(4, tk.taskStatus);
       upt.setTimestamp(5, Timestamp.valueOf(tk.taskLastUpdatedAt));
       upt.setLong(6, this.taskid);
       this.taskName = tk.taskName;
-      this.taskDL = tk.taskDL;
+      this.taskDeadline = tk.taskDeadline;
       this.taskDescription = tk.taskDescription;
       this.taskStatus = tk.taskStatus;
       this.taskLastUpdatedAt = tk.taskLastUpdatedAt;
