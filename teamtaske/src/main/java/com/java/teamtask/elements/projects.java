@@ -3,8 +3,8 @@ package com.java.teamtask.elements;
 import java.time.LocalDateTime;
 import java.util.*;
 
-// import java.sql.*;
-// import java.time.LocalDateTime;
+import java.sql.*;
+import java.time.LocalDateTime;
 
 public class projects {
   protected int id = 0;
@@ -71,7 +71,59 @@ public class projects {
     return this.tasksList;
   }
 
-  public void addTasks(int taskId) {}
+  public tasks addTasks(
+    Connection conn, String name, String des,
+    String status, LocalDateTime dl, users User
+  ) throws SQLException {
 
-  public void removeTasks(int taskId) {}
+    String sql = """
+    INSERT INTO Tasks(taskName, taskDescription, taskDeadline, taskStatus,
+                      taskCreatedAt, taskLastUpdatedAt, user_id, Project_id)
+    VALUES(?, ?, ?, ?, ?, ?, ?, ?)
+    """;
+    LocalDateTime now = LocalDateTime.now();
+
+    try (conn;
+      PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS) // trả về id tự động sinh
+    ) {
+      stmt.setString(1, name);
+      stmt.setString(2, des);
+      stmt.setTimestamp(3, Timestamp.valueOf(dl));
+      stmt.setString(4, "To do"); // status mặc định lúc mới tạo
+      stmt.setTimestamp(5, Timestamp.valueOf(now));
+      stmt.setTimestamp(6, Timestamp.valueOf(now));
+      stmt.setLong(7, User.userId);
+      stmt.setLong(8, this.id); // projectId
+      
+      int added = stmt.executeUpdate();
+      if (added == 0) {
+        throw new SQLException("Lỗi thêm task");
+      }
+      try (ResultSet rs = stmt.getGeneratedKeys()) {
+        if (rs.next()) {
+          int id = rs.getInt(1);
+          tasks t = new tasks(id, name, description, "To do", now, now, dl, User);
+          tasksList.add(t);
+          return t;
+        }
+        throw new SQLException("Không lấy được id");
+      }
+    } catch(Exception e) {
+        System.out.println("Lỗi thêm task" + e);
+        return null;
+    }
+  }
+
+  public String removeTasks(Connection conn, int id) {
+    String sql = "DELETE FROM Tasks WHERE taskid = ?";
+    try (conn;
+    PreparedStatement stmt = conn.prepareStatement(sql)
+    ) {
+      stmt.setLong(1, id);
+      stmt.executeUpdate();
+    } catch (Exception e) {
+      return "Lỗi xóa task";
+    }
+    return null;
+  }
 }
