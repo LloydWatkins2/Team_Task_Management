@@ -108,7 +108,7 @@ public class projects {
         throw new SQLException("Không lấy được id");
       }
     } catch (Exception e) {
-      System.out.println("Lỗi thêm task" + e);
+      System.out.println("Lỗi thêm task");
       return null;
     }
   }
@@ -119,9 +119,11 @@ public class projects {
         PreparedStatement stmt = conn.prepareStatement(sql)) {
       stmt.setLong(1, id);
       stmt.executeUpdate();
+      
+      tasksList.removeIf(t -> t.taskid == id);
+      return "Đã xóa task";
     } catch (Exception e) {
       return "Lỗi xóa task";
     }
-    return null;
   }
 }
