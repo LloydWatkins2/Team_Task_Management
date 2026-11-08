@@ -24,6 +24,27 @@ public class tasks {
       LocalDateTime taskCreatedAt,
       LocalDateTime taskLastUpdatedAt,
       LocalDateTime taskDeadline,
+      users assginee) {
+
+    this.taskid = taskid;
+    this.taskName = taskName;
+    this.taskDescription = taskDescription;
+    this.taskStatus = taskStatus;
+    this.taskCreatedAt = taskCreatedAt == null ? LocalDateTime.now() : taskCreatedAt;
+    this.taskLastUpdatedAt = taskLastUpdatedAt == null ? LocalDateTime.now() : taskLastUpdatedAt;
+    this.taskDeadline = taskDeadline;
+    this.assginee = assginee;
+    this.commentsList = new HashMap<>();
+  }
+
+  public tasks(
+      int taskid,
+      String taskName,
+      String taskDescription,
+      String taskStatus,
+      LocalDateTime taskCreatedAt,
+      LocalDateTime taskLastUpdatedAt,
+      LocalDateTime taskDeadline,
       users assginee,
       Connection conn) {
 

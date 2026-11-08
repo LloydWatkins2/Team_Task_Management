@@ -1,10 +1,8 @@
 package com.java.teamtask.elements;
 
-import java.time.LocalDateTime;
-import java.util.*;
-
 import java.sql.*;
 import java.time.LocalDateTime;
+import java.util.*;
 
 public class projects {
   protected int id = 0;
@@ -72,20 +70,21 @@ public class projects {
   }
 
   public tasks addTasks(
-    Connection conn, String name, String des,
-    String status, LocalDateTime dl, users User
-  ) throws SQLException {
+      Connection conn, String name, String des, String status, LocalDateTime dl, users User)
+      throws SQLException {
 
-    String sql = """
-    INSERT INTO Tasks(taskName, taskDescription, taskDeadline, taskStatus,
-                      taskCreatedAt, taskLastUpdatedAt, user_id, Project_id)
-    VALUES(?, ?, ?, ?, ?, ?, ?, ?)
-    """;
+    String sql =
+        """
+        INSERT INTO Tasks(taskName, taskDescription, taskDeadline, taskStatus,
+                          taskCreatedAt, taskLastUpdatedAt, user_id, Project_id)
+        VALUES(?, ?, ?, ?, ?, ?, ?, ?)
+        """;
     LocalDateTime now = LocalDateTime.now();
 
     try (conn;
-      PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS) // trả về id tự động sinh
-    ) {
+        PreparedStatement stmt =
+            conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS) // trả về id tự động sinh
+        ) {
       stmt.setString(1, name);
       stmt.setString(2, des);
       stmt.setTimestamp(3, Timestamp.valueOf(dl));
@@ -94,7 +93,7 @@ public class projects {
       stmt.setTimestamp(6, Timestamp.valueOf(now));
       stmt.setLong(7, User.userId);
       stmt.setLong(8, this.id); // projectId
-      
+
       int added = stmt.executeUpdate();
       if (added == 0) {
         throw new SQLException("Lỗi thêm task");
@@ -108,17 +107,16 @@ public class projects {
         }
         throw new SQLException("Không lấy được id");
       }
-    } catch(Exception e) {
-        System.out.println("Lỗi thêm task" + e);
-        return null;
+    } catch (Exception e) {
+      System.out.println("Lỗi thêm task" + e);
+      return null;
     }
   }
 
   public String removeTasks(Connection conn, int id) {
     String sql = "DELETE FROM Tasks WHERE taskid = ?";
     try (conn;
-    PreparedStatement stmt = conn.prepareStatement(sql)
-    ) {
+        PreparedStatement stmt = conn.prepareStatement(sql)) {
       stmt.setLong(1, id);
       stmt.executeUpdate();
     } catch (Exception e) {
