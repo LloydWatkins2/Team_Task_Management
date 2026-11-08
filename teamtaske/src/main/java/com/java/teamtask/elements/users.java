@@ -205,13 +205,4 @@ public class users {
     ArrayList<projects> Projects = new ArrayList<>(this.relatedProjects.keySet());
     return Projects;
   }
-
-  public Double viewProjectStatus(projects project) {
-    int goal = project.tasksList.size();
-    int cnt = 0;
-    for (tasks t : project.tasksList) {
-      if (t.taskStatus == "Hoàn thành") cnt += 1;
-    }
-    return (double) (cnt / goal);
-  }
 }
