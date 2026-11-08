@@ -120,6 +120,4 @@ public class tasks {
       System.out.println("Lỗi update, thử lại sau " + e);
     }
   }
-
-  public void deleteTask(int taskid) {}
 }

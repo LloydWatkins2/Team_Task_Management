@@ -107,7 +107,7 @@ public class SQL {
             + "WHERE pa.user_id = ?";
 
     String taskSql =
-        "SELECT t.taskid, t.taskName, t.taskDescription, t.taskStatus, "
+        "SELECT t.taskid, t.taskName, t.taskDescription, t.taskStatus,t.taskDeadline "
             + "t.taskCreatedAt, t.taskLastUpdatedAt, "
             + "u.id AS uid, u.lname, u.fname, u.username, u.password, u.gmail, u.phone, u.dob "
             + "FROM Tasks t "
@@ -149,6 +149,7 @@ public class SQL {
                       rst.getString("t.taskStatus"),
                       rst.getObject("t.taskCreatedAt", LocalDateTime.class),
                       rst.getObject("t.taskLastUpdatedAt", LocalDateTime.class),
+                      rst.getObject("t.taskDeadline", LocalDateTime.class),
                       assignee,
                       conn));
             }
