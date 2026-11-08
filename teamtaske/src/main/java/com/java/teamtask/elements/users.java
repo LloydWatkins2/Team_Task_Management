@@ -9,6 +9,7 @@ public class users {
 
   protected String lname;
   protected String fname;
+  protected String username;
   protected String password;
   protected String email;
 
@@ -20,6 +21,7 @@ public class users {
       int userId,
       String lname,
       String fname,
+      String username,
       String password,
       String email,
       String phone,
@@ -27,13 +29,14 @@ public class users {
     this.userId = userId;
     this.lname = lname;
     this.fname = fname;
+    this.username = username;
     this.email = email;
     this.password = password;
     this.phone = phone;
     this.dob = dob;
   }
 
-  public users(String lname, String fname, String email, String password) {
+  public users(String lname, String fname, String username, String email, String password) {
     this.lname = lname;
     this.fname = fname;
 
@@ -42,7 +45,7 @@ public class users {
     this.relatedProjects = new HashMap<>();
   }
 
-  public int getUserId() {
+  public long getUserId() {
     return this.userId;
   }
 
@@ -76,11 +79,10 @@ public class users {
   public void deleteAccount(Connection conn, users User) {
     String sql = "DELETE FROM users WHERE id = ?";
     try (conn;
-    PreparedStatement del = conn.prepareStatement(sql)){
-      del.setLong(1, User.userId);
+        PreparedStatement del = conn.prepareStatement(sql)) {
+      del.setInt(1, User.userId);
       del.executeUpdate();
-    }
-    catch (Exception e) {
+    } catch (Exception e) {
       System.out.println("Lỗi xóa" + e);
     }
   }
@@ -88,15 +90,18 @@ public class users {
   public void updateAccount(Connection conn, users User) {
     String sql = "UPDATE users SET lname = ?, fname = ?, email = ?, password = ? WHERE id = ?";
     try (conn;
-    PreparedStatement upt = conn.prepareStatement(sql)){
+        PreparedStatement upt = conn.prepareStatement(sql)) {
       upt.setString(1, User.lname);
       upt.setString(2, User.fname);
       upt.setString(3, User.email);
       upt.setString(4, User.password);
-      upt.setLong(5, User.userId);
+      upt.setInt(5, this.userId);
       upt.executeUpdate();
-    }
-    catch (Exception e) {
+      this.lname = User.lname;
+      this.fname = User.fname;
+      this.email = User.email;
+      this.password = User.password;
+    } catch (Exception e) {
       System.out.println("Lỗi cập nhật" + e);
     }
   }
@@ -208,21 +213,5 @@ public class users {
       if (t.taskStatus == "Hoàn thành") cnt += 1;
     }
     return (double) (cnt / goal);
-  }
-
-  public void action(projects project) {
-    projectsAssignments assignment = this.relatedProjects.get(project);
-    if (assignment == null) {
-      System.out.println("Bạn không thuộc dự án này.");
-      return;
-    }
-    if ("owner".equalsIgnoreCase(assignment.getRole())) {
-      owners ownerAction = new owners(this, project);
-      ownerAction.viewProjectInfo();
-      ownerAction.viewMembers();
-    } else {
-      members memberAction = new members(this, project);
-      memberAction.viewProjectInfo();
-    }
   }
 }

@@ -30,7 +30,7 @@ public class SQL {
         ArrayList<String> tabs = new ArrayList<>();
         tabs.add(
             "CREATE TABLE IF NOT EXISTS users (\n"
-                + "id BIGSERIAL PRIMARY KEY,\n"
+                + "id SERIAL PRIMARY KEY,\n"
                 + "lname VARCHAR(30) NOT NULL,\n"
                 + "fname VARCHAR(20) NOT NULL,\n"
                 + "username VARCHAR(30) NOT NULL,\n"
@@ -42,7 +42,7 @@ public class SQL {
 
         tabs.add(
             "CREATE TABLE IF NOT EXISTS Projects (\n"
-                + "Project_id BIGSERIAL PRIMARY KEY,\n"
+                + "Project_id SERIAL PRIMARY KEY,\n"
                 + "Name TEXT NOT NULL,\n"
                 + "Description TEXT NOT NULL,\n"
                 + "Deadline TIMESTAMP NOT NULL,\n"
@@ -52,8 +52,8 @@ public class SQL {
 
         tabs.add(
             "CREATE TABLE IF NOT EXISTS ProjectsAssgiments (\n"
-                + "user_id BIGINT NOT NULL,\n"
-                + "Project_id BIGINT NOT NULL,\n"
+                + "user_id INT NOT NULL,\n"
+                + "Project_id INT NOT NULL,\n"
                 + "role TEXT DEFAULT 'member',\n"
                 + "assignat TIMESTAMP,\n"
                 + "FOREIGN KEY (user_id) REFERENCES users(id),\n"
@@ -63,24 +63,24 @@ public class SQL {
 
         tabs.add(
             "CREATE TABLE IF NOT EXISTS Tasks (\n"
-                + "taskid BIGSERIAL PRIMARY KEY,\n"
+                + "taskid SERIAL PRIMARY KEY,\n"
                 + "taskName TEXT NOT NULL,\n"
                 + "taskDescription TEXT NOT NULL,\n"
                 + "taskDeadline TIMESTAMP NOT NULL,\n"
                 + "taskStatus VARCHAR(20) NOT NULL DEFAULT 'pending',\n"
                 + "taskCreatedAt TIMESTAMP NOT NULL,\n"
                 + "taskLastUpdatedAt TIMESTAMP NOT NULL,\n"
-                + "user_id BIGINT NOT NULL,\n"
-                + "Project_id BIGINT NOT NULL,\n"
+                + "user_id INT NOT NULL,\n"
+                + "Project_id INT NOT NULL,\n"
                 + "FOREIGN KEY (user_id) REFERENCES users(id),\n"
                 + "FOREIGN KEY (Project_id) REFERENCES Projects(Projectid)\n"
                 + ");");
 
         tabs.add(
             "CREATE TABLE IF NOT EXISTS Comments (\n"
-                + "commentid BIGSERIAL PRIMARY KEY,\n"
-                + "taskid BIGINT NOT NULL,\n"
-                + "fromwhom BIGINT NOT NULL,\n"
+                + "commentid SERIAL PRIMARY KEY,\n"
+                + "taskid INT NOT NULL,\n"
+                + "fromwhom INT NOT NULL,\n"
                 + "commentdetail TEXT NOT NULL,\n"
                 + "FOREIGN KEY (taskid) REFERENCES Tasks(taskid),\n"
                 + "FOREIGN KEY (fromwhom) REFERENCES users(id)\n"
@@ -119,54 +119,56 @@ public class SQL {
         PreparedStatement getTask = conn.prepareStatement(taskSql)) {
 
       HashMap<projects, projectsAssignments> ans = new HashMap<>();
-      getProject.setLong(1, user.userId);
+      getProject.setInt(1, user.userId);
 
       try (ResultSet rs = getProject.executeQuery()) {
         while (rs.next()) {
-          long projectId = rs.getLong("Projectid");
+          int projectId = rs.getInt("p.Projectid");
 
           // Lấy danh sách task của project này
           ArrayList<tasks> list = new ArrayList<>();
-          getTask.setLong(1, projectId);
+          getTask.setInt(1, projectId);
           try (ResultSet rst = getTask.executeQuery()) {
             while (rst.next()) {
               users assignee =
                   new users(
                       rst.getInt("uid"),
-                      rst.getString("lname"),
-                      rst.getString("fname"),
-                      rst.getString("password"),
-                      rst.getString("gmail"),
-                      rst.getString("phone"),
-                      rst.getString("dob"));
+                      rst.getString("u.lname"),
+                      rst.getString("u.fname"),
+                      rst.getString("u.username"),
+                      rst.getString("u.password"),
+                      rst.getString("u.gmail"),
+                      rst.getString("u.phone"),
+                      rst.getString("u.dob"));
 
               list.add(
                   new tasks(
-                      rst.getInt("taskid"),
-                      rst.getString("taskName"),
-                      rst.getString("taskDescription"),
-                      rst.getString("taskStatus"),
-                      rst.getObject("taskCreatedAt", LocalDateTime.class),
-                      rst.getObject("taskLastUpdatedAt", LocalDateTime.class),
-                      assignee));
+                      rst.getInt("t.taskid"),
+                      rst.getString("t.taskName"),
+                      rst.getString("t.taskDescription"),
+                      rst.getString("t.taskStatus"),
+                      rst.getObject("t.taskCreatedAt", LocalDateTime.class),
+                      rst.getObject("t.taskLastUpdatedAt", LocalDateTime.class),
+                      assignee,
+                      conn));
             }
           }
 
           projects p =
               new projects(
                   (int) projectId,
-                  rs.getString("Name"),
-                  rs.getString("Description"),
-                  rs.getObject("Deadline", LocalDateTime.class),
-                  rs.getObject("Create_at", LocalDateTime.class),
-                  rs.getObject("Update_at", LocalDateTime.class),
+                  rs.getString("p.Name"),
+                  rs.getString("p.Description"),
+                  rs.getObject("p.Deadline", LocalDateTime.class),
+                  rs.getObject("p.Create_at", LocalDateTime.class),
+                  rs.getObject("p.Update_at", LocalDateTime.class),
                   list);
 
-          LocalDateTime assignAt = rs.getObject("assignat", LocalDateTime.class);
+          LocalDateTime assignAt = rs.getObject("pa.assignat", LocalDateTime.class);
           ans.put(
               p,
               new projectsAssignments(
-                  user, p, assignAt == null ? null : assignAt, rs.getString("role")));
+                  user, p, assignAt == null ? null : assignAt, rs.getString("pa.role")));
         }
       }
 
