@@ -19,7 +19,7 @@ public class members implements seeProjects {
   public Double viewOverrallProgress() {}
 
   @Override
-  public Double viewMemberProgress(member k) {}
+  public Double viewMemberProgress(members k) {}
 
   @Override
   public String viewTask() {}
@@ -28,7 +28,8 @@ public class members implements seeProjects {
   public String checkWork() {}
 
   @Override
-  public void commentTask(tasks tk, String cmt) {}
+  public String commentTask(tasks tk, String cmt) {}
 
-  public void viewMemberInfo() {}
+  @Override 
+  public String viewMemberInfo(members k) {}
 }

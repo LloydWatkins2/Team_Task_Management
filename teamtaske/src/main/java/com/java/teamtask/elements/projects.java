@@ -55,15 +55,15 @@ public class projects {
     return this.description;
   }
 
-  public String getDL() {
+  public LocalDateTime getDL() {
     return this.deadline;
   }
 
-  public String getCreateTime() {
+  public LocalDateTime getCreateTime() {
     return this.createdAt;
   }
 
-  public String getUpdateTime() {
+  public LocalDateTime getUpdateTime() {
     return this.lastUpdatedAt;
   }
 

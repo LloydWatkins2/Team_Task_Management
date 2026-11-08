@@ -51,10 +51,10 @@ public class owners implements projectsManage {
   public String viewMemberInfo(members Member) {}
 
   @Override
-  public double viewOverallProgress() {}
+  public Double viewOverrallProgress() {}
 
   @Override
-  public double viewMemberProgress(members Member) {}
+  public Double viewMemberProgress(members Member) {}
 
   @Override
   public String viewTask() {}
@@ -63,5 +63,5 @@ public class owners implements projectsManage {
   public String checkWork() {}
 
   @Override
-  public String commentTasks(tasks Tasks, String comment) {}
+  public String commentTask(tasks Tasks, String comment) {}
 }

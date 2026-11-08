@@ -14,5 +14,7 @@ public interface seeProjects {
 
   public abstract String checkWork();
 
-  public abstract void commentTask(tasks tk, String cmt);
+  public abstract String commentTask(tasks tk, String cmt);
+
+  public abstract String viewMemberInfo(members k);
 }
