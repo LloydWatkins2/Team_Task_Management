@@ -9,7 +9,7 @@ import java.util.HashMap;
 public class tasks {
   protected int taskid;
   protected String taskName, taskDescription, taskStatus;
-  protected LocalDateTime taskCreatedAt, taskLastUpdatedAt, taskDL;
+  protected LocalDateTime taskCreatedAt, taskLastUpdatedAt, taskDeadline;
   public users assginee;
   public HashMap<users, String> commentsList;
 
@@ -20,6 +20,7 @@ public class tasks {
       String taskStatus,
       LocalDateTime taskCreatedAt,
       LocalDateTime taskLastUpdatedAt,
+      LocalDateTime taskDeadline,
       users assginee) {
     this.taskid = taskid;
     this.taskName = taskName;
@@ -27,6 +28,7 @@ public class tasks {
     this.taskStatus = taskStatus;
     this.taskCreatedAt = taskCreatedAt == null ? LocalDateTime.now() : taskCreatedAt;
     this.taskLastUpdatedAt = taskLastUpdatedAt == null ? LocalDateTime.now() : taskLastUpdatedAt;
+    this.taskDeadline = taskDeadline;
     this.assginee = assginee;
     this.commentsList = takeComment();
   }
