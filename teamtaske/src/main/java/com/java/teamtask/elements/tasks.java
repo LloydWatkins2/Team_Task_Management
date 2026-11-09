@@ -1,6 +1,5 @@
 package com.java.teamtask.elements;
 
-import com.java.teamtask.connections.*;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;

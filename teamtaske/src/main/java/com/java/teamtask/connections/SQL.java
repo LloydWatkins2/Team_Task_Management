@@ -72,8 +72,8 @@ public class SQL {
                 + "taskLastUpdatedAt TIMESTAMP NOT NULL,\n"
                 + "user_id INT NOT NULL,\n"
                 + "Project_id INT NOT NULL,\n"
-                + "FOREIGN KEY (user_id) REFERENCES users(id),\n"
-                + "FOREIGN KEY (Project_id) REFERENCES Projects(Projectid)\n"
+                + "FOREIGN KEY (Project_id) REFERENCES Projects(Project_id) ON DELETE CASCADE\n"
+                + "FOREIGN KEY (Project_id) REFERENCES Projects(Project_id)\n"
                 + ");");
 
         tabs.add(
@@ -82,8 +82,8 @@ public class SQL {
                 + "taskid INT NOT NULL,\n"
                 + "fromwhom INT NOT NULL,\n"
                 + "commentdetail TEXT NOT NULL,\n"
-                + "FOREIGN KEY (taskid) REFERENCES Tasks(taskid),\n"
-                + "FOREIGN KEY (fromwhom) REFERENCES users(id)\n"
+                + "FOREIGN KEY (taskid) REFERENCES Tasks(taskid) ON DELETE CASCADE,\n"
+                + "FOREIGN KEY (fromwhom) REFERENCES users(id) ON DELETE CASCADE\n"
                 + ");");
         try (Statement st = conn.createStatement()) {
           for (String sql : tabs) {
@@ -100,10 +100,10 @@ public class SQL {
   public static HashMap<projects, projectsAssignments> selectRelatedProject(
       Connection conn, users user) {
     String projectSql =
-        "SELECT p.Projectid, p.Name, p.Description, p.Deadline, p.Create_at, p.Update_at, "
+        "SELECT p.Project_id, p.Name, p.Description, p.Deadline, p.Create_at, p.Update_at, "
             + "pa.role, pa.assignat "
             + "FROM Projects p "
-            + "JOIN ProjectsAssgiments pa ON p.Projectid = pa.Project_id "
+            + "JOIN ProjectsAssgiments pa ON p.Project_id = pa.Project_id "
             + "WHERE pa.user_id = ?";
 
     String taskSql =

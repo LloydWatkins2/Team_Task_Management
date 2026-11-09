@@ -1,9 +1,13 @@
 package com.java.teamtask.elements;
 
+import java.util.*;
 import java.sql.Connection;
 import java.sql.*;
 import java.util.*;
 import java.time.LocalDateTime;
+import com.java.teamtask.connections.SQL;
+import java.sql.PreparedStatement;
+import java.util.ArrayList;
 
 public class members implements seeProjects {
   private users user;
@@ -19,7 +23,9 @@ public class members implements seeProjects {
   }
   
   @Override
-  public String viewProjectInfo(Connection conn) {}
+  public projects viewProjectInfo() {
+    return this.project;
+  }
 
   @Override
   public ArrayList<projectsAssignments> viewMembers(Connection conn) throws SQLException{
@@ -52,7 +58,7 @@ public class members implements seeProjects {
     int goal = this.project.tasksList.size();
     int cnt = 0;
     for (tasks t : this.project.tasksList) {
-      if (t.taskStatus == "Hoàn thành") cnt += 1;
+      if (t.taskStatus.equals("Hoàn thành")) cnt += 1;
     }
     return (double) (cnt / goal);
   }
@@ -80,7 +86,13 @@ public class members implements seeProjects {
   }
 
   @Override
-  public String viewTask(Connection conn) {} // xem thông tin chi tiết của task
+  public ArrayList<tasks> viewTasks() {
+    return this.project.tasksList;
+  } // xem thông tin chi tiết của task
+
+  public tasks viewTasksInfo(tasks tk) {
+    return tk;
+  }
 
   @Override
   public String commentTask(
@@ -115,4 +127,19 @@ public class members implements seeProjects {
     }
     return null;
    }
+  public void commentTask(Connection conn, tasks Tasks, String comment) {
+    String sql = "INSERT INTO Comments VALUES(?,?,?);";
+    try (conn;
+        PreparedStatement ins = conn.prepareStatement(sql)) {
+      ins.setInt(1, Tasks.taskid);
+      ins.setInt(2, this.user.userId);
+      ins.setString(3, comment);
+      ins.executeUpdate();
+      Tasks.commentsList.put(this.user, comment);
+      System.out.println("Da gui comment");
+
+    } catch (Exception e) {
+      System.out.println("Khong the comments, xin thu lai " + e);
+    }
+  }
 }
