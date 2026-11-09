@@ -3,6 +3,7 @@ package com.java.teamtask.elements;
 import com.java.teamtask.connections.SQL;
 import java.util.*;
 import java.sql.*;
+import java.time.LocalDateTime;
 
 public class owners implements projectsManage {
   private users user;
@@ -14,14 +15,13 @@ public class owners implements projectsManage {
   }
 
   @Override
-  public void deleteMember(members Member, Conncection conn) {
+  public void deleteMember(members Member, Connection conn) {
       int memberId = Member.getUser().userId;
       if(memberId == this.user.userId){
           System.out.println("Bạn là Owner, bạn không thể tự xoá chính mình khỏi dự án");
           return;
       }
       String checkSql = "SELECT 1 FROM ProjectsAssgiments WHERE user_id = ? AND Project_id = ? AND role <> 'owner'";
-      String reassignSql = "UPDATE Tasks SET user_id = ?, taskLastUpdatedAt = ? WHERE user_id = ? AND Project_id = ?";
       String deleteSql = "DELETE FROM ProjectsAssgiments WHERE user_id = ? AND Project_id = ? AND role <> 'owner'";
       try{
         try (PreparedStatement check = conn.prepareStatement(checkSql)){
@@ -33,6 +33,7 @@ public class owners implements projectsManage {
                     return;
                 }
             }
+          }
             try (PreparedStatement del = conn.prepareStatement(deleteSql)) {
                 del.setInt(1, memberId);
                 del.setInt(2, this.project.id);
@@ -47,7 +48,6 @@ public class owners implements projectsManage {
         }
         catch(SQLException e){
             System.out.println(e.getMessage());
-        }
       }
   }
 
@@ -110,36 +110,36 @@ public class owners implements projectsManage {
   public String viewProjectInfo() {}
 
   @Override
-  public String viewMembers(Connection conn) {
-      String sql = "SELECT u.lname, u.fname, u.gmail, pa.role"
-              + "FROM projectsAssignments as pa"
-              + "JOIN users as u ON u.id= pa.user_id"
-              + "WHERE pa.Project_id=?";
-      StringBuilder sb = new StringBuilder("Danh sách thành viên: \n");
-      int count =0;
-      try(PreparedStatement stmt = conn.prepareStatement(sql)){
-          stmt.setLong(1, this.project.id);
-          try(ResultSet rs = stmt.executeQuery()){
-              while(rs.next()){
-                  count++;
-                  sb.append(count).append(". ")
-                    .append(rs.getString("lname")).append(" ").append(rs.getString("fname"))
-                    .append("\nemail: ").append(rs.getString("gmail"))
-                    .append("\nvai trò: ").append(rs.getString("role")).append("\n");
-              }
-          }
-          sb.insert(0, "Tổng số thành viên: " + count + "\n");
-          return sb.toString();
+  public ArrayList<projectsAssignments> viewMembers(Connection conn) throws SQLException {
+  String sql =
+      "SELECT u.id, u.lname, u.fname, u.username, u.gmail, u.phone, u.dob, "
+          + "pa.role, pa.assignat "
+          + "FROM ProjectsAssgiments pa "
+          + "JOIN users u ON u.id = pa.user_id "
+          + "WHERE pa.Project_id = ?";
+  ArrayList<projectsAssignments> list = new ArrayList<>();
+  try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+    stmt.setInt(1, this.project.id);
+    try (ResultSet rs = stmt.executeQuery()) {
+      while (rs.next()) {
+        users u = new users(
+            rs.getInt("id"), rs.getString("lname"), rs.getString("fname"),
+            rs.getString("username"), null, rs.getString("gmail"),
+            rs.getString("phone"), rs.getString("dob"));
+        list.add(new projectsAssignments(
+            u, this.project,
+            rs.getObject("assignat", LocalDateTime.class),
+            rs.getString("role")));
       }
-      catch(SQLException e){
-          return e.getMessage();
-      }
+    }
   }
+  return list;
+}
 
   @Override
-  public String viewMemberInfo(Connection conn, members k) {
-      if(k==null) return "Không tìm thấy thành viên";
-      return k.viewMemberInfo(conn, k);
+  public projectsAssignments viewMemberInfo(Connection conn, users k) throws SQLException {
+    if (k == null) return null;
+    return new members(this.user, this.project).viewMemberInfo(conn, k);
   }
 
   @Override
