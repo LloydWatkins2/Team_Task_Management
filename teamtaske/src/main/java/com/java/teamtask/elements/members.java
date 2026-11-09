@@ -1,5 +1,7 @@
 package com.java.teamtask.elements;
 
+import java.sql.Connection;
+
 public class members implements seeProjects {
   private users user;
   private projects project;
@@ -10,10 +12,10 @@ public class members implements seeProjects {
   }
 
   @Override
-  public String viewProjectInfo() {}
+  public String viewProjectInfo(Connection conn) {}
 
   @Override
-  public String viewMembers() {}
+  public String viewMembers(Connection conn) {}
 
   @Override
   public Double viewOverrallProgress() {
@@ -26,14 +28,24 @@ public class members implements seeProjects {
   }
 
   @Override
-  public Double viewMemberProgress(members k) {}
+  public Double viewMemberProgress(
+    Connection conn,
+    members k
+  ) {}
 
   @Override
-  public String viewTask() {} // xem thông tin chi tiết của task
+  public String viewTask(Connection conn) {} // xem thông tin chi tiết của task
 
   @Override
-  public String commentTask(tasks tk, String cmt) {}
+  public String commentTask(
+    Connection conn,
+    tasks tk,
+    String cmt
+  ) {}
 
   @Override 
-  public String viewMemberInfo(members k) {}
+  public String viewMemberInfo(
+    Connection conn,
+    members k
+  ) {}
 }

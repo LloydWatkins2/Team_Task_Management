@@ -8,7 +8,7 @@ public interface seeProjects {
 
   public abstract String viewMembers(Connection conn); // xem danh sách thành viên
 
-  public abstract Double viewOverrallProgress(Connection conn); // 
+  public abstract Double viewOverrallProgress(); // 
 
   public abstract Double viewMemberProgress(
     Connection conn,
