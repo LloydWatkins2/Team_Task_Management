@@ -105,9 +105,13 @@ public class owners implements projectsManage {
   public Double viewMemberProgress(members Member) {}
 
   @Override
-  public ArrayList<tasks> viewTask() {
+  public ArrayList<tasks> viewTasks() {
     return this.project.tasksList;
-  } // xem thông tin chi tiết task
+  }
+
+  public tasks viewTasksInfo(tasks tk) {
+    return tk;
+  }
 
   @Override
   public void commentTask(Connection conn, tasks Tasks, String comment) {

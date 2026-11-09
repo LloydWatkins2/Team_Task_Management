@@ -13,7 +13,7 @@ public interface seeProjects {
 
   public abstract Double viewMemberProgress(Connection conn, members k); //
 
-  public abstract ArrayList<tasks> viewTask();
+  public abstract ArrayList<tasks> viewTasks();
 
   public abstract void commentTask(Connection conn, tasks tk, String cmt);
 

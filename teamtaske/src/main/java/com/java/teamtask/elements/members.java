@@ -2,6 +2,7 @@ package com.java.teamtask.elements;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.util.ArrayList;
 
 public class members implements seeProjects {
   private users user;
@@ -32,7 +33,13 @@ public class members implements seeProjects {
   public Double viewMemberProgress(Connection conn, members k) {}
 
   @Override
-  public String viewTask(Connection conn) {} // xem thông tin chi tiết của task
+  public ArrayList<tasks> viewTasks() {
+    return this.project.tasksList;
+  } // xem thông tin chi tiết của task
+
+  public tasks viewTasksInfo(tasks tk) {
+    return tk;
+  }
 
   @Override
   public void commentTask(Connection conn, tasks Tasks, String comment) {
@@ -50,7 +57,4 @@ public class members implements seeProjects {
       System.out.println("Khong the comments, xin thu lai " + e);
     }
   }
-
-  @Override
-  public String viewMemberInfo(Connection conn, members k) {}
 }
