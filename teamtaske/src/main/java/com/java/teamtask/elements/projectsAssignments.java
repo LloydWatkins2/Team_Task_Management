@@ -1,7 +1,6 @@
 package com.java.teamtask.elements;
 
 import java.time.LocalDateTime;
-import java.util.*;
 
 public class projectsAssignments {
   protected users user;
