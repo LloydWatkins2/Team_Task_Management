@@ -188,6 +188,11 @@ public final class FormField extends JPanel {
         return hasError;
     }
 
+    /** Nội dung lỗi inline hiện tại; rỗng khi không có lỗi. */
+    public String getErrorText() {
+        return error.getText() == null ? "" : error.getText();
+    }
+
     public void clearError() {
         setError(null);
     }

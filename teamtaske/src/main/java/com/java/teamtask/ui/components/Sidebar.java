@@ -1,5 +1,7 @@
 package com.java.teamtask.ui.components;
 
+import com.java.teamtask.elements.projectsAssignments;
+import com.java.teamtask.ui.data.UiMapper;
 import com.java.teamtask.ui.theme.Layout;
 import com.java.teamtask.ui.theme.Palette;
 import com.java.teamtask.ui.theme.Space;
@@ -18,7 +20,7 @@ import java.awt.Dimension;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Sidebar: logo, menu chính, danh sách dự án và khối người dùng. */
+/** Sidebar: logo, menu chính, danh sách dự án động và khối người dùng. */
 public final class Sidebar extends JPanel {
     public interface Listener {
         void onNavigate(String key);
@@ -31,6 +33,8 @@ public final class Sidebar extends JPanel {
     private final JLabel menuLabel = sectionLabel("MENU");
     private final JLabel projectLabel = sectionLabel("DỰ ÁN");
     private final JPanel projectsPanel = new JPanel();
+    private final JPanel avatarHolder = new JPanel(new BorderLayout());
+    private final JLabel userNameLabel = new JLabel();
 
     public Sidebar(String userName, Listener listener) {
         this.listener = listener == null ? key -> {
@@ -51,7 +55,7 @@ public final class Sidebar extends JPanel {
         addNav("projects", "Dự án", "projects");
         addNav("calendar", "Lịch", "calendar");
         addNav("team", "Thành viên", "users");
-        addNav("settings", "Cài đặt", "settings");
+        addNav("settings", "Hồ sơ", "user");
 
         add(Box.createVerticalStrut(Space.X3L));
         add(divider());
@@ -65,15 +69,13 @@ public final class Sidebar extends JPanel {
         projectsPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         add(projectsPanel);
 
-        addProject("Website Redesign");
-        addProject("Mobile App");
-        addProject("Marketing Q4");
-
         add(Box.createVerticalGlue());
         add(divider());
         add(Box.createVerticalStrut(Space.LG));
-        add(userBlock(userName));
+        add(userBlock());
 
+        setUserName(userName);
+        setProjects(List.of());
         select("dashboard");
     }
 
@@ -116,23 +118,6 @@ public final class Sidebar extends JPanel {
         add(Box.createVerticalStrut(Space.SM));
     }
 
-    private void addProject(String name) {
-        NavItem item = new NavItem(name, "projects");
-        item.setAlignmentX(Component.LEFT_ALIGNMENT);
-        item.setMaximumSize(new Dimension(Integer.MAX_VALUE, UiScale.px(48)));
-        item.addActionListener(e -> {
-            if (!item.isSelected()) {
-                item.setSelected(true);
-            }
-            listener.onNavigate("project:" + name);
-        });
-        group.add(item);
-        items.add(item);
-        keys.add("project:" + name);
-        projectsPanel.add(item);
-        projectsPanel.add(Box.createVerticalStrut(Space.SM));
-    }
-
     private static JPanel divider() {
         JPanel divider = new JPanel();
         divider.setOpaque(true);
@@ -144,25 +129,27 @@ public final class Sidebar extends JPanel {
         return divider;
     }
 
-    private JPanel userBlock(String userName) {
+    private JPanel userBlock() {
         JPanel row = new JPanel(new BorderLayout(Space.SM, 0));
         row.setOpaque(false);
         row.setAlignmentX(Component.LEFT_ALIGNMENT);
         row.setMaximumSize(new Dimension(Integer.MAX_VALUE, UiScale.px(48)));
-        row.add(new Avatar(userName, 40), BorderLayout.WEST);
+
+        avatarHolder.setOpaque(false);
+        avatarHolder.setPreferredSize(new Dimension(UiScale.px(40), UiScale.px(40)));
+        row.add(avatarHolder, BorderLayout.WEST);
 
         JPanel texts = new JPanel();
         texts.setOpaque(false);
         texts.setLayout(new BoxLayout(texts, BoxLayout.Y_AXIS));
-        JLabel name = new JLabel(userName);
-        name.setFont(Typography.meta());
-        name.setForeground(Palette.TEXT);
-        name.setAlignmentX(Component.LEFT_ALIGNMENT);
-        JLabel role = new JLabel("Quản trị viên");
+        userNameLabel.setFont(Typography.meta());
+        userNameLabel.setForeground(Palette.TEXT);
+        userNameLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel role = new JLabel("Thành viên");
         role.setFont(Typography.small());
         role.setForeground(Palette.TEXT_MUTED_STRONG);
         role.setAlignmentX(Component.LEFT_ALIGNMENT);
-        texts.add(name);
+        texts.add(userNameLabel);
         texts.add(role);
         row.add(texts, BorderLayout.CENTER);
 
@@ -170,6 +157,70 @@ public final class Sidebar extends JPanel {
         logout.addActionListener(e -> listener.onNavigate("logout"));
         row.add(logout, BorderLayout.EAST);
         return row;
+    }
+
+    /** Đổi tên hiển thị ở khối người dùng và avatar. */
+    public void setUserName(String userName) {
+        String display = userName == null || userName.isBlank() ? "Người dùng" : userName;
+        userNameLabel.setText(display);
+        avatarHolder.removeAll();
+        avatarHolder.add(new Avatar(display, 40), BorderLayout.CENTER);
+        avatarHolder.revalidate();
+        avatarHolder.repaint();
+    }
+
+    /** Cập nhật danh sách dự án của người dùng hiện tại; không hiển thị dự án ngoài phạm vi. */
+    public void setProjects(List<projectsAssignments> assignments) {
+        for (int i = keys.size() - 1; i >= 0; i--) {
+            if (keys.get(i).startsWith("project:")) {
+                NavItem removed = items.remove(i);
+                keys.remove(i);
+                group.remove(removed);
+            }
+        }
+        projectsPanel.removeAll();
+
+        if (assignments != null) {
+            for (projectsAssignments assignment : assignments) {
+                if (assignment == null || assignment.getProject() == null) {
+                    continue;
+                }
+                addProject(assignment);
+            }
+        }
+
+        boolean visible = projectsPanel.getComponentCount() > 0;
+        projectLabel.setVisible(visible);
+        projectsPanel.setVisible(visible);
+        projectsPanel.revalidate();
+        projectsPanel.repaint();
+        revalidate();
+        repaint();
+    }
+
+    private void addProject(projectsAssignments assignment) {
+        String name = assignment.getProject().getName();
+        String text = name == null || name.isBlank() ? "Dự án" : name;
+        if (text.length() > 24) {
+            text = text.substring(0, 21) + "...";
+        }
+        String key = "project:" + assignment.getProject().getId();
+        NavItem item = new NavItem(text, "projects");
+        item.setToolTipText(
+            UiMapper.displayName(assignment.getUser()) + " · " + UiMapper.roleLabel(assignment.getRole()));
+        item.setAlignmentX(Component.LEFT_ALIGNMENT);
+        item.setMaximumSize(new Dimension(Integer.MAX_VALUE, UiScale.px(48)));
+        item.addActionListener(e -> {
+            if (!item.isSelected()) {
+                item.setSelected(true);
+            }
+            listener.onNavigate(key);
+        });
+        group.add(item);
+        items.add(item);
+        keys.add(key);
+        projectsPanel.add(item);
+        projectsPanel.add(Box.createVerticalStrut(Space.SM));
     }
 
     /** Chọn mục menu theo key mà không phát sự kiện điều hướng. */
@@ -186,8 +237,9 @@ public final class Sidebar extends JPanel {
         setPreferredSize(new Dimension(
                 UiScale.px(compact ? Layout.SIDEBAR_WIDTH_COMPACT : Layout.SIDEBAR_WIDTH), 0));
         setBorder(new EmptyBorder(Layout.sidebarPadding(compact ? Layout.BP_SM : Layout.SHELL_MAX_WIDTH)));
-        projectLabel.setVisible(!compact);
-        projectsPanel.setVisible(!compact);
+        boolean hasProjects = projectsPanel.getComponentCount() > 0;
+        projectLabel.setVisible(!compact && hasProjects);
+        projectsPanel.setVisible(!compact && hasProjects);
         revalidate();
         repaint();
     }

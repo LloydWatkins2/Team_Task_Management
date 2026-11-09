@@ -1,102 +1,151 @@
 package com.java.teamtask.ui.screens;
 
+import com.java.teamtask.elements.projects;
+import com.java.teamtask.elements.projectsAssignments;
 import com.java.teamtask.ui.components.AppButton;
+import com.java.teamtask.ui.components.Badge;
 import com.java.teamtask.ui.components.EmptyState;
 import com.java.teamtask.ui.components.PageHeader;
+import com.java.teamtask.ui.components.ProjectCard;
 import com.java.teamtask.ui.components.StackPanel;
-import com.java.teamtask.ui.components.TaskCard;
-import com.java.teamtask.ui.sample.TaskItem;
+import com.java.teamtask.ui.data.DataAccessException;
+import com.java.teamtask.ui.data.SessionGateway;
+import com.java.teamtask.ui.data.UiMapper;
+import com.java.teamtask.ui.data.UserSession;
 import com.java.teamtask.ui.theme.Space;
 
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
-import java.util.ArrayList;
-import java.util.List;
+import java.awt.Window;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.function.Consumer;
 
-/** Dashboard: tiêu đề trang, danh sách công việc và trạng thái rỗng. */
+/** Dashboard chỉ hiển thị các dự án mà người dùng hiện tại tham gia, kèm role. */
 public final class DashboardScreen extends JPanel {
-    private final List<TaskItem> tasks = new ArrayList<>();
-    private final PageHeader header;
-    private final StackPanel list = new StackPanel();
-    private final JPanel emptyWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, Space.X6L + Space.XXL));
-    private final Consumer<TaskItem> onOpenTask;
-    private final Runnable onCreateTask;
+  private final SessionGateway gateway;
+  private final UserSession session;
+  private final Consumer<projectsAssignments> onOpenProject;
+  private final Runnable onProjectsChanged;
+  private final PageHeader header;
+  private final StackPanel list = new StackPanel();
+  private final JPanel emptyWrapper =
+      new JPanel(new FlowLayout(FlowLayout.CENTER, 0, Space.X6L));
+  private final AppButton createButton;
 
-    public DashboardScreen(List<TaskItem> tasks, Runnable onCreateTask, Runnable onOpenProjects,
-                           Consumer<TaskItem> onOpenTask) {
-        this.onOpenTask = onOpenTask == null ? task -> {
-        } : onOpenTask;
-        this.onCreateTask = onCreateTask == null ? () -> {
-        } : onCreateTask;
+  public DashboardScreen(
+      SessionGateway gateway,
+      UserSession session,
+      Consumer<projectsAssignments> onOpenProject,
+      Runnable onProjectsChanged) {
+    this.gateway = gateway;
+    this.session = session;
+    this.onOpenProject = onOpenProject == null ? assignment -> {} : onOpenProject;
+    this.onProjectsChanged = onProjectsChanged == null ? () -> {} : onProjectsChanged;
 
-        setOpaque(false);
-        setLayout(new BorderLayout());
+    setOpaque(false);
+    setLayout(new BorderLayout());
 
-        AppButton create = new AppButton("Tạo công việc", AppButton.Variant.PRIMARY).withIcon("plus");
-        create.addActionListener(e -> this.onCreateTask.run());
+    createButton = new AppButton("Tạo dự án", AppButton.Variant.PRIMARY).withIcon("plus");
+    createButton.addActionListener(e -> openCreateDialog());
+    header = new PageHeader("Tổng quan", "", createButton);
+    add(header, BorderLayout.NORTH);
+    add(list, BorderLayout.CENTER);
 
-        header = new PageHeader("Công việc của tôi", "", create);
-        add(header, BorderLayout.NORTH);
-        add(list, BorderLayout.CENTER);
+    AppButton emptyCreate = new AppButton("Tạo dự án", AppButton.Variant.PRIMARY).withIcon("plus");
+    emptyCreate.addActionListener(e -> openCreateDialog());
+    emptyWrapper.setOpaque(false);
+    emptyWrapper.add(
+        new EmptyState(
+            "Chưa có dự án nào",
+            "Tạo dự án đầu tiên để bắt đầu quản lý công việc cùng nhóm của bạn.",
+            emptyCreate));
+    refresh();
+  }
 
-        AppButton emptyCreate = new AppButton("Tạo công việc", AppButton.Variant.PRIMARY).withIcon("plus");
-        emptyCreate.addActionListener(e -> this.onCreateTask.run());
-        AppButton emptyProjects = new AppButton("Khám phá dự án", AppButton.Variant.OUTLINE)
-                .withIcon("projects");
-        emptyProjects.addActionListener(e -> {
-            if (onOpenProjects != null) {
-                onOpenProjects.run();
-            }
-        });
-        emptyWrapper.setOpaque(false);
-        emptyWrapper.add(new EmptyState("Chưa có công việc nào",
-                "Bắt đầu bằng cách tạo công việc đầu tiên hoặc khám phá các dự án đang diễn ra.",
-                emptyCreate, emptyProjects));
-
-        setTasks(tasks == null ? List.of() : tasks);
+  /** Tải lại danh sách dự án từ DB cho user hiện tại. */
+  public void refresh() {
+    if (!session.isAuthenticated()) {
+      render(Map.of());
+      return;
     }
-
-    public void setTasks(List<TaskItem> newTasks) {
-        tasks.clear();
-        if (newTasks != null) {
-            tasks.addAll(newTasks);
-        }
-        rebuild();
+    try {
+      LinkedHashMap<projects, projectsAssignments> loaded =
+          gateway.loadProjects(session.getUser());
+      session.getUser().setRelatedProjects(new LinkedHashMap<>(loaded));
+      render(loaded);
+      onProjectsChanged.run();
+    } catch (DataAccessException ex) {
+      showError(ex.getMessage());
     }
+  }
 
-    public List<TaskItem> getTasks() {
-        return tasks;
+  private void render(Map<projects, projectsAssignments> assignments) {
+    list.removeAll();
+    remove(list);
+    remove(emptyWrapper);
+
+    if (assignments == null || assignments.isEmpty()) {
+      header.setSubtitle("Bạn chưa tham gia dự án nào");
+      add(emptyWrapper, BorderLayout.CENTER);
+    } else {
+      for (Map.Entry<projects, projectsAssignments> entry : assignments.entrySet()) {
+        projects project = entry.getKey();
+        projectsAssignments assignment = entry.getValue();
+        String role = assignment == null ? "member" : assignment.getRole();
+        ProjectCard card =
+            new ProjectCard(
+                project.getName(),
+                project.getDescription(),
+                UiMapper.formatDate(project.getDL()),
+                UiMapper.roleLabel(role),
+                "owner".equalsIgnoreCase(role) ? Badge.Kind.PRIMARY : Badge.Kind.NEUTRAL,
+                () -> onOpenProject.accept(assignment));
+        list.addRow(card, Space.LG);
+      }
+      header.setSubtitle(assignments.size() + " dự án đang tham gia");
+      add(list, BorderLayout.CENTER);
     }
+    revalidate();
+    repaint();
+  }
 
-    private void rebuild() {
-        list.removeAll();
-        remove(list);
-        remove(emptyWrapper);
-
-        if (tasks.isEmpty()) {
-            add(emptyWrapper, BorderLayout.CENTER);
-            header.setSubtitle("Chưa có công việc nào");
-        } else {
-            for (TaskItem task : tasks) {
-                TaskCard card = new TaskCard(task.title(), task.subtitle(), task.status(),
-                        task.project(), task.assignee(), task.deadline(),
-                        task.iconBackground(), task.iconName());
-                card.setOnOpen(() -> this.onOpenTask.accept(task));
-                list.addRow(card, Space.LG);
-            }
-            add(list, BorderLayout.CENTER);
-            long inProgress = tasks.stream()
-                    .filter(task -> task.status() == TaskCard.Status.IN_PROGRESS)
-                    .count();
-            header.setSubtitle(tasks.size() + " công việc • " + inProgress + " đang thực hiện");
-        }
-        revalidate();
-        repaint();
+  private void openCreateDialog() {
+    if (!session.isAuthenticated()) {
+      return;
     }
+    Window owner = SwingUtilities.getWindowAncestor(this);
+    new ProjectFormDialog(
+            owner,
+            "Tạo dự án mới",
+            "",
+            "",
+            null,
+            values -> {
+              try {
+                projects created =
+                    gateway.createProject(
+                        session.getUser(), values.name(), values.description(), values.deadline());
+                if (created == null) {
+                  showError("Không thể tạo dự án. Vui lòng thử lại.");
+                  return;
+                }
+                refresh();
+              } catch (DataAccessException ex) {
+                showError(ex.getMessage());
+              }
+            })
+        .setVisible(true);
+  }
 
-    public void setCompact(boolean compact) {
-        header.setCompact(compact);
-    }
+  private void showError(String message) {
+    JOptionPane.showMessageDialog(this, message, "Lỗi", JOptionPane.ERROR_MESSAGE);
+  }
+
+  public void setCompact(boolean compact) {
+    header.setCompact(compact);
+  }
 }

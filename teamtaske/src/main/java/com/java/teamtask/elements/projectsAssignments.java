@@ -2,6 +2,7 @@ package com.java.teamtask.elements;
 
 import java.time.LocalDateTime;
 
+/** Liên kết giữa user và project kèm role. */
 public class projectsAssignments {
   protected users user;
   protected projects project;
@@ -19,11 +20,27 @@ public class projectsAssignments {
     return this.role;
   }
 
-  public users getUser() { // dùng để truy cập thuộc tính
+  public void setRole(String role) {
+    this.role = role;
+  }
+
+  public users getUser() {
     return this.user;
   }
 
-  public projects getProject() { // dùng để truy cập thuộc tính
+  public projects getProject() {
     return this.project;
+  }
+
+  public void setProject(projects project) {
+    this.project = project;
+  }
+
+  public LocalDateTime getAssignedAt() {
+    return this.assignedAt;
+  }
+
+  public boolean isOwner() {
+    return "owner".equalsIgnoreCase(this.role);
   }
 }

@@ -2,28 +2,24 @@ package com.java.teamtask.elements;
 
 import java.sql.Connection;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 
-/** projectsManage */
+/** Các hành động chỉ owner của project mới được thực hiện. */
 public interface projectsManage extends seeProjects {
-  public abstract void deleteMember(members Mem, Connection conn);
+  void deleteMember(members member, Connection conn);
 
-  public abstract void addMember(users us, Connection conn);
+  void addMember(users user, Connection conn);
 
-  public abstract void assignTask(ArrayList<tasks> taske, Connection conn);
+  void assignTask(tasks task, users assignee, Connection conn);
 
-  public abstract void updateTask(
-      tasks Tasks,
+  void updateTask(
+      tasks task,
       String taskName,
       String taskStatus,
       String taskDescription,
-      LocalDateTime taskDL,
+      LocalDateTime taskDeadline,
       Connection conn);
 
-  public abstract String updateProject(
-    Connection conn,
-    String name, String des, LocalDateTime dl
-  );
+  String updateProject(Connection conn, String name, String description, LocalDateTime deadline);
 
-  public abstract void deleteProject(Connection conn);
+  void deleteProject(Connection conn);
 }

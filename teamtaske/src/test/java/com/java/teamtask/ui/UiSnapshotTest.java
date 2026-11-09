@@ -1,10 +1,13 @@
 package com.java.teamtask.ui;
 
-import com.java.teamtask.ui.sample.SampleData;
+import com.java.teamtask.ui.data.CommentView;
+import com.java.teamtask.ui.data.UserSession;
 import com.java.teamtask.ui.screens.CommentsPanel;
 import com.java.teamtask.ui.screens.DashboardScreen;
-import com.java.teamtask.ui.screens.ProjectsScreen;
-import com.java.teamtask.ui.screens.TaskFormScreen;
+import com.java.teamtask.ui.screens.LoginScreen;
+import com.java.teamtask.ui.screens.ProfileScreen;
+import com.java.teamtask.ui.screens.ProjectDetailScreen;
+import com.java.teamtask.ui.screens.RegisterScreen;
 import com.java.teamtask.ui.theme.Theme;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
@@ -20,11 +23,13 @@ import java.awt.GraphicsEnvironment;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** Render các màn hình ra ảnh để kiểm tra trực quan và bắt lỗi layout/paint. */
+/** Render các màn hình DB-backed ra ảnh để kiểm tra trực quan và bắt lỗi layout/paint. */
 class UiSnapshotTest {
     private static final File OUT = new File("target/ui-screenshots");
 
@@ -38,9 +43,10 @@ class UiSnapshotTest {
     void loginAndAppShellRender() throws Exception {
         Assumptions.assumeFalse(GraphicsEnvironment.isHeadless(), "Cần môi trường có màn hình");
 
+        TestGateway gateway = new TestGateway();
         MainFrame[] frame = new MainFrame[1];
         SwingUtilities.invokeAndWait(() -> {
-            MainFrame f = new MainFrame();
+            MainFrame f = new MainFrame(gateway);
             f.addNotify();
             f.setSize(1360, 900);
             f.validate();
@@ -51,7 +57,7 @@ class UiSnapshotTest {
         assertDiverse(login);
 
         SwingUtilities.invokeAndWait(() -> {
-            frame[0].showApp();
+            frame[0].signIn(gateway.an);
             frame[0].validate();
         });
         BufferedImage app = render(frame[0].getContentPane(), 1360, 900, "app-1360");
@@ -64,40 +70,58 @@ class UiSnapshotTest {
         BufferedImage compact = render(frame[0].getContentPane(), 1024, 700, "app-1024");
         assertDiverse(compact);
 
-        SwingUtilities.invokeAndWait(() -> frame[0].dispose());
+        SwingUtilities.invokeAndWait(frame[0]::dispose);
     }
 
     @Test
     void screensRender() throws Exception {
-        TaskFormScreen form = onEdt(() -> new TaskFormScreen(() -> {
-        }, task -> {
-        }));
-        assertDiverse(render(form, 960, 820, "task-form-960"));
+        TestGateway gateway = new TestGateway();
+        UserSession session = onEdt(() -> {
+            UserSession value = new UserSession();
+            value.setUser(gateway.an);
+            return value;
+        });
 
-        DashboardScreen dashboard = onEdt(() -> new DashboardScreen(SampleData.tasks(),
-                () -> {
-                }, () -> {
-                }, task -> {
-                }));
+        LoginScreen login = onEdt(() -> new LoginScreen(gateway, user -> {}, () -> {}));
+        assertDiverse(render(login, 960, 820, "login-960"));
+
+        RegisterScreen register = onEdt(() -> new RegisterScreen(gateway, user -> {}, () -> {}));
+        assertDiverse(render(register, 960, 820, "register-960"));
+
+        DashboardScreen dashboard =
+                onEdt(() -> new DashboardScreen(gateway, session, assignment -> {}, () -> {}));
         assertDiverse(render(dashboard, 960, 820, "dashboard-960"));
 
-        ProjectsScreen projects = onEdt(() -> new ProjectsScreen(() -> {
-        }));
-        assertDiverse(render(projects, 960, 820, "projects-960"));
+        ProjectDetailScreen detail = onEdt(() -> {
+            ProjectDetailScreen screen =
+                    new ProjectDetailScreen(gateway, session, () -> {}, () -> {});
+            screen.open(gateway.anOwner);
+            return screen;
+        });
+        assertDiverse(render(detail, 960, 900, "project-detail-960"));
 
-        CommentsPanel comments = onEdt(() -> new CommentsPanel(SampleData.CURRENT_USER, SampleData.comments()));
+        ProfileScreen profile = onEdt(() -> new ProfileScreen(gateway, session, () -> {}));
+        assertDiverse(render(profile, 960, 820, "profile-960"));
+
+        CommentsPanel comments = onEdt(() ->
+                new CommentsPanel(
+                        List.of(
+                                new CommentView("Nguyễn An", "Hôm nay", "Bình luận mẫu"),
+                                new CommentView("Trần Minh", "Hôm qua", "Đã xem, sẽ phản hồi sớm.")),
+                        text -> {}));
         assertDiverse(render(comments, 600, 420, "comments-600"));
     }
 
-    private static <T extends JComponent> T onEdt(java.util.function.Supplier<T> supplier) throws Exception {
-        final JComponent[] result = new JComponent[1];
+    private static <T> T onEdt(Supplier<T> supplier) throws Exception {
+        Object[] result = new Object[1];
         SwingUtilities.invokeAndWait(() -> result[0] = supplier.get());
         @SuppressWarnings("unchecked")
         T typed = (T) result[0];
         return typed;
     }
 
-    private static BufferedImage render(Component component, int width, int height, String name) throws Exception {
+    private static BufferedImage render(Component component, int width, int height, String name)
+            throws Exception {
         BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
         SwingUtilities.invokeAndWait(() -> {
             component.setSize(width, height);

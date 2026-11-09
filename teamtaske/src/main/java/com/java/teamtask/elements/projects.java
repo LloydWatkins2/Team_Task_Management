@@ -1,8 +1,13 @@
 package com.java.teamtask.elements;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
 
 public class projects {
   protected int id = 0;
@@ -25,7 +30,7 @@ public class projects {
     this.deadline = dl;
     this.createdAt = ca;
     this.lastUpdatedAt = up;
-    this.tasksList = (list != null) ? list : new ArrayList<>();
+    this.tasksList = list == null ? new ArrayList<>() : list;
   }
 
   public projects(
@@ -42,19 +47,43 @@ public class projects {
     this.deadline = dl;
     this.createdAt = ca;
     this.lastUpdatedAt = up;
-    this.tasksList = (list != null) ? list : new ArrayList<>();
+    this.tasksList = list == null ? new ArrayList<>() : list;
+  }
+
+  public int getId() {
+    return this.id;
+  }
+
+  public void setId(int id) {
+    this.id = id;
   }
 
   public String getName() {
     return this.name;
   }
 
+  public void setName(String name) {
+    this.name = name;
+  }
+
   public String getDes() {
     return this.description;
   }
 
+  public String getDescription() {
+    return this.description;
+  }
+
+  public void setDescription(String description) {
+    this.description = description;
+  }
+
   public LocalDateTime getDL() {
     return this.deadline;
+  }
+
+  public void setDeadline(LocalDateTime deadline) {
+    this.deadline = deadline;
   }
 
   public LocalDateTime getCreateTime() {
@@ -65,65 +94,118 @@ public class projects {
     return this.lastUpdatedAt;
   }
 
+  public void setLastUpdatedAt(LocalDateTime lastUpdatedAt) {
+    this.lastUpdatedAt = lastUpdatedAt;
+  }
+
   public ArrayList<tasks> getTasksList() {
+    if (this.tasksList == null) {
+      this.tasksList = new ArrayList<>();
+    }
     return this.tasksList;
   }
 
+  public void setTasksList(ArrayList<tasks> tasksList) {
+    this.tasksList = tasksList == null ? new ArrayList<>() : tasksList;
+  }
+
+  public tasks getTaskById(int taskId) {
+    for (tasks task : getTasksList()) {
+      if (task.getTaskid() == taskId) {
+        return task;
+      }
+    }
+    return null;
+  }
+
+  /** Thêm task vào project và database. Trả về task vừa tạo hoặc null nếu lỗi. */
   public tasks addTasks(
-      Connection conn, String name, String des, String status, LocalDateTime dl, users User)
+      Connection conn,
+      String name,
+      String des,
+      String status,
+      LocalDateTime dl,
+      users user)
       throws SQLException {
-
+    if (conn == null || user == null || name == null || name.isBlank()) {
+      return null;
+    }
     String sql =
-        """
-        INSERT INTO Tasks(taskName, taskDescription, taskDeadline, taskStatus,
-                          taskCreatedAt, taskLastUpdatedAt, user_id, Project_id)
-        VALUES(?, ?, ?, ?, ?, ?, ?, ?)
-        """;
+        "INSERT INTO tasks(taskname, taskdescription, taskdeadline, taskstatus, "
+            + "taskcreatedat, tasklastupdatedat, user_id, project_id) "
+            + "VALUES(?, ?, ?, ?, ?, ?, ?, ?)";
     LocalDateTime now = LocalDateTime.now();
+    LocalDateTime due = dl == null ? now.plusDays(1) : dl;
+    String taskStatus = status == null || status.isBlank() ? "TODO" : status;
 
-    try (conn;
-        PreparedStatement stmt =
-            conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS) // trả về id tự động sinh
-        ) {
-      stmt.setString(1, name);
-      stmt.setString(2, des);
-      stmt.setTimestamp(3, Timestamp.valueOf(dl));
-      stmt.setString(4, "To do"); // status mặc định lúc mới tạo
+    try (PreparedStatement stmt =
+        conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+      stmt.setString(1, name.trim());
+      stmt.setString(2, des == null ? "" : des.trim());
+      stmt.setTimestamp(3, Timestamp.valueOf(due));
+      stmt.setString(4, taskStatus);
       stmt.setTimestamp(5, Timestamp.valueOf(now));
       stmt.setTimestamp(6, Timestamp.valueOf(now));
-      stmt.setLong(7, User.userId);
-      stmt.setLong(8, this.id); // projectId
-
-      int added = stmt.executeUpdate();
-      if (added == 0) {
-        throw new SQLException("Lỗi thêm task");
+      stmt.setInt(7, user.userId);
+      stmt.setInt(8, this.id);
+      if (stmt.executeUpdate() == 0) {
+        return null;
       }
       try (ResultSet rs = stmt.getGeneratedKeys()) {
-        if (rs.next()) {
-          int id = rs.getInt(1);
-          tasks t = new tasks(id, name, description, "To do", now, now, dl, User);
-          tasksList.add(t);
-          return t;
+        if (!rs.next()) {
+          return null;
         }
-        throw new SQLException("Không lấy được id");
+        tasks task =
+            new tasks(
+                rs.getInt(1),
+                name.trim(),
+                des == null ? "" : des.trim(),
+                taskStatus,
+                now,
+                now,
+                due,
+                user);
+        getTasksList().add(task);
+        return task;
       }
-    } catch (Exception e) {
-      System.out.println("Lỗi thêm task");
-      return null;
     }
   }
 
-  public String removeTasks(Connection conn, int id) {
-    String sql = "DELETE FROM Tasks WHERE taskid = ?";
-    try (conn;
-        PreparedStatement stmt = conn.prepareStatement(sql)) {
-      stmt.setLong(1, id);
-      stmt.executeUpdate();
-      
-      tasksList.removeIf(t -> t.taskid == id);
-      return "Đã xóa task";
-    } catch (Exception e) {
+  /** Xóa task cùng comments của task. */
+  public String removeTasks(Connection conn, int taskId) {
+    if (conn == null) {
       return "Lỗi xóa task";
+    }
+    String deleteCommentsSql = "DELETE FROM comments WHERE taskid = ?";
+    String deleteTaskSql = "DELETE FROM tasks WHERE taskid = ?";
+    boolean oldAutoCommit = true;
+    try {
+      oldAutoCommit = conn.getAutoCommit();
+      conn.setAutoCommit(false);
+      try (PreparedStatement stmt = conn.prepareStatement(deleteCommentsSql)) {
+        stmt.setInt(1, taskId);
+        stmt.executeUpdate();
+      }
+      try (PreparedStatement stmt = conn.prepareStatement(deleteTaskSql)) {
+        stmt.setInt(1, taskId);
+        stmt.executeUpdate();
+      }
+      getTasksList().removeIf(task -> task.getTaskid() == taskId);
+      conn.commit();
+      return "Đã xóa task";
+    } catch (SQLException e) {
+      try {
+        conn.rollback();
+      } catch (SQLException ignored) {
+        // bỏ qua
+      }
+      return "Lỗi xóa task";
+    } finally {
+      try {
+        conn.setAutoCommit(oldAutoCommit);
+      } catch (SQLException ignored) {
+        // bỏ qua
+      }
     }
   }
 }

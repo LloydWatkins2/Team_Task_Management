@@ -22,6 +22,7 @@ public final class TopBar extends Card {
     private final JPanel greeting = new JPanel();
     private final JLabel greetingLabel = new JLabel("Xin chào");
     private final JLabel nameLabel = new JLabel();
+    private final JPanel avatarHolder = new JPanel(new BorderLayout());
 
     public TopBar(String userName) {
         super(new BorderLayout(Space.MD, 0));
@@ -38,7 +39,6 @@ public final class TopBar extends Card {
         actions.add(divider());
         actions.add(Box.createHorizontalStrut(Space.LG));
 
-        Avatar avatar = new Avatar(userName);
         greeting.setOpaque(false);
         greeting.setLayout(new BoxLayout(greeting, BoxLayout.Y_AXIS));
         greetingLabel.setFont(Typography.small());
@@ -53,7 +53,9 @@ public final class TopBar extends Card {
 
         JPanel user = new JPanel(new BorderLayout(Space.SM, 0));
         user.setOpaque(false);
-        user.add(avatar, BorderLayout.WEST);
+        avatarHolder.setOpaque(false);
+        avatarHolder.add(new Avatar(userName), BorderLayout.CENTER);
+        user.add(avatarHolder, BorderLayout.WEST);
         user.add(greeting, BorderLayout.CENTER);
         actions.add(user);
 
@@ -80,7 +82,12 @@ public final class TopBar extends Card {
     }
 
     public void setUserName(String userName) {
-        nameLabel.setText(userName);
+        String display = userName == null || userName.isBlank() ? "Người dùng" : userName;
+        nameLabel.setText(display);
+        avatarHolder.removeAll();
+        avatarHolder.add(new Avatar(display), BorderLayout.CENTER);
+        avatarHolder.revalidate();
+        avatarHolder.repaint();
     }
 
     public void setCompact(boolean compact) {

@@ -1,35 +1,56 @@
 package com.java.teamtask.elements;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 
+/** Hành động của owner trong một project. */
 public class owners implements projectsManage {
-  private users user;
-  private projects project;
-  private projectsAssignments pa;
+  private final users user;
+  private final projects project;
+  private final projectsAssignments pa;
 
-  public owners(users Users, projects Projects, projectsAssignments pa) {
-    this.user = Users;
-    this.project = Projects;
-    this.pa = pa;
+  public owners(users user, projects project, projectsAssignments assignment) {
+    this.user = user;
+    this.project = project;
+    this.pa = assignment;
+  }
+
+  public users getUser() {
+    return this.user;
+  }
+
+  public projects getProject() {
+    return this.project;
   }
 
   @Override
-  public void deleteMember(members Member, Connection conn) {
-    int memberId = Member.getUser().userId;
+  public void deleteMember(members member, Connection conn) {
+    if (member == null || member.getUser() == null || conn == null) {
+      return;
+    }
+    int memberId = member.getUser().userId;
     if (memberId == this.user.userId) {
-      System.out.println("Bạn là Owner, bạn không thể tự xoá chính mình khỏi dự án");
+      System.out.println("Bạn là Owner, không thể tự xoá chính mình khỏi dự án");
       return;
     }
     String checkSql =
-        "SELECT 1 FROM ProjectsAssgiments WHERE user_id = ? AND Project_id = ? AND role <> 'owner'";
+        "SELECT 1 FROM projectsassgiments "
+            + "WHERE user_id = ? AND project_id = ? AND role <> 'owner'";
+    String updateTasksSql =
+        "UPDATE tasks SET user_id = ? WHERE project_id = ? AND user_id = ?";
     String deleteSql =
-        "DELETE FROM ProjectsAssgiments WHERE user_id = ? AND Project_id = ? AND role <> 'owner'";
+        "DELETE FROM projectsassgiments "
+            + "WHERE user_id = ? AND project_id = ? AND role <> 'owner'";
     try {
       try (PreparedStatement check = conn.prepareStatement(checkSql)) {
         check.setInt(1, memberId);
-        check.setInt(2, this.project.id);
+        check.setInt(2, this.project.getId());
         try (ResultSet rs = check.executeQuery()) {
           if (!rs.next()) {
             System.out.println("Thành viên không tồn tại trong dự án");
@@ -37,143 +58,158 @@ public class owners implements projectsManage {
           }
         }
       }
+      try (PreparedStatement update = conn.prepareStatement(updateTasksSql)) {
+        update.setInt(1, this.user.userId);
+        update.setInt(2, this.project.getId());
+        update.setInt(3, memberId);
+        update.executeUpdate();
+      }
       try (PreparedStatement del = conn.prepareStatement(deleteSql)) {
         del.setInt(1, memberId);
-        del.setInt(2, this.project.id);
+        del.setInt(2, this.project.getId());
         del.executeUpdate();
       }
-      for (tasks t : this.project.tasksList) {
-        if (t.assginee != null && t.assginee.userId == memberId) {
-          t.assginee = this.user;
+      for (tasks task : this.project.getTasksList()) {
+        if (task.getAssginee() != null && task.getAssginee().userId == memberId) {
+          task.assginee = this.user;
         }
       }
       System.out.println("Đã xoá thành viên khỏi dự án.");
     } catch (SQLException e) {
-      System.out.println(e.getMessage());
+      System.out.println("Lỗi xoá thành viên: " + e.getMessage());
     }
   }
 
   @Override
-  public void addMember(users us, Connection conn) {
-    if (us == null) {
-      System.out.println("người dùng không hợp lệ");
-      return;
+  public void addMember(users newMember, Connection conn) {
+    addMemberChecked(newMember, conn);
+  }
+
+  /** Thêm thành viên và trả về true nếu thực sự thêm mới. */
+  public boolean addMemberChecked(users newMember, Connection conn) {
+    if (newMember == null || conn == null) {
+      return false;
     }
-    String checkSql = "SELECT 1 FROM ProjectsAssgiments WHERE user_id = ? AND Project_id = ?";
+    String checkSql =
+        "SELECT 1 FROM projectsassgiments WHERE user_id = ? AND project_id = ?";
     String insertSql =
-        "INSERT INTO ProjectsAssgiments(user_id, Project_id, role, assignat) VALUES(?, ?, 'member',"
-            + " ?)";
+        "INSERT INTO projectsassgiments(user_id, project_id, role, assignat) "
+            + "VALUES(?, ?, 'member', ?)";
     try {
       try (PreparedStatement check = conn.prepareStatement(checkSql)) {
-        check.setInt(1, us.userId);
-        check.setInt(2, this.project.id);
+        check.setInt(1, newMember.userId);
+        check.setInt(2, this.project.getId());
         try (ResultSet rs = check.executeQuery()) {
           if (rs.next()) {
             System.out.println("Người dùng đã là thành viên của dự án.");
-            return;
+            return false;
           }
         }
       }
       try (PreparedStatement ins = conn.prepareStatement(insertSql)) {
-        ins.setInt(1, us.userId);
-        ins.setInt(2, this.project.id);
-        ins.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
+        ins.setInt(1, newMember.userId);
+        ins.setInt(2, this.project.getId());
+        ins.setTimestamp(3, Timestamp.valueOf(LocalDateTime.now()));
         ins.executeUpdate();
         System.out.println("Đã thêm thành viên.");
+        return true;
       }
     } catch (SQLException e) {
-      System.out.println(e.getMessage());
+      System.out.println("Lỗi thêm thành viên: " + e.getMessage());
+      return false;
     }
   }
 
   @Override
-  public void assignTask(ArrayList<tasks> taske, Connection conn) {
-    String sql = "UPDATE Tasks SET user_id = ? where task_id = ?";
-    try (conn;
-        PreparedStatement upt = conn.prepareStatement(sql)) {
-      for (tasks e : taske) {
-        e.assginee = this.user;
-        this.project.tasksList.add(e);
-        upt.setInt(1, this.user.userId);
-        upt.setInt(2, e.taskid);
-        upt.executeUpdate();
+  public void assignTask(tasks task, users assignee, Connection conn) {
+    if (task == null || assignee == null || conn == null) {
+      return;
+    }
+    String sql = "UPDATE tasks SET user_id = ? WHERE taskid = ?";
+    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+      stmt.setInt(1, assignee.userId);
+      stmt.setInt(2, task.getTaskid());
+      if (stmt.executeUpdate() > 0) {
+        task.assginee = assignee;
+        if (!this.project.getTasksList().contains(task)) {
+          this.project.getTasksList().add(task);
+        }
+        System.out.println("Giao việc thành công");
       }
-      System.out.println(" Update task thành công");
-    } catch (Exception e) {
-      System.out.println("loi giao viec " + e);
+    } catch (SQLException e) {
+      System.out.println("Lỗi giao việc: " + e.getMessage());
     }
   }
 
   @Override
   public void updateTask(
-      tasks Tasks,
+      tasks task,
       String taskName,
       String taskStatus,
       String taskDescription,
-      LocalDateTime taskDL,
+      LocalDateTime taskDeadline,
       Connection conn) {
-    tasks newTasks =
+    if (task == null || conn == null) {
+      return;
+    }
+    LocalDateTime now = LocalDateTime.now();
+    tasks updated =
         new tasks(
-            0,
-            taskName,
-            taskDescription,
-            taskStatus,
-            LocalDateTime.now(),
-            LocalDateTime.now(),
-            taskDL,
-            this.user);
-    Tasks.updatetask(conn, newTasks);
+            task.getTaskid(),
+            taskName == null || taskName.isBlank() ? task.getTaskName() : taskName,
+            taskDescription == null ? task.getTaskDescription() : taskDescription,
+            taskStatus == null || taskStatus.isBlank() ? task.getTaskStatus() : taskStatus,
+            task.getTaskCreatedAt(),
+            now,
+            taskDeadline == null ? task.getTaskDeadline() : taskDeadline,
+            task.getAssginee());
+    task.updatetask(conn, updated);
   }
 
   @Override
-  public String updateProject(Connection conn, String name, String des, LocalDateTime dl) {
-
-    String upProj =
-        "UPDATE Projects SET Name = ?, Description = ?, Deadline = ?, Update_at = ? WHERE"
-            + " Project_id = ?";
-    LocalDateTime now = LocalDateTime.now();
-
-    try (conn;
-        PreparedStatement stmt = conn.prepareStatement(upProj)) {
-      stmt.setString(1, name);
-      stmt.setString(2, des);
-      stmt.setTimestamp(3, Timestamp.valueOf(dl));
-      stmt.setTimestamp(4, Timestamp.valueOf(now)); // Update_at
-      stmt.setInt(5, this.project.id);
-
-      this.project.name = name;
-      this.project.description = des;
-      this.project.deadline = dl;
-      this.project.lastUpdatedAt = now;
-
-      this.pa.project = project;
-      this.user.relatedProjects.put(this.project, pa);
-
-      return "Cập nhật thành công";
-
-    } catch (Exception e) {
+  public String updateProject(
+      Connection conn, String name, String description, LocalDateTime deadline) {
+    if (conn == null) {
       return "Lỗi cập nhật project";
+    }
+    String sql =
+        "UPDATE projects SET name = ?, description = ?, deadline = ?, update_at = ? "
+            + "WHERE projectid = ?";
+    LocalDateTime now = LocalDateTime.now();
+    String projectName = name == null || name.isBlank() ? this.project.getName() : name;
+    String projectDescription =
+        description == null ? this.project.getDes() : description;
+    LocalDateTime projectDeadline =
+        deadline == null ? this.project.getDL() : deadline;
+    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+      stmt.setString(1, projectName);
+      stmt.setString(2, projectDescription);
+      stmt.setTimestamp(3, Timestamp.valueOf(projectDeadline));
+      stmt.setTimestamp(4, Timestamp.valueOf(now));
+      stmt.setInt(5, this.project.getId());
+      if (stmt.executeUpdate() == 0) {
+        return "Không tìm thấy project";
+      }
+      this.project.name = projectName;
+      this.project.description = projectDescription;
+      this.project.deadline = projectDeadline;
+      this.project.lastUpdatedAt = now;
+      if (this.pa != null) {
+        this.pa.setProject(this.project);
+        this.user.putAssignment(this.project, this.pa);
+      }
+      return "Cập nhật thành công";
+    } catch (SQLException e) {
+      return "Lỗi cập nhật project: " + e.getMessage();
     }
   }
 
   @Override
   public void deleteProject(Connection conn) {
-
-    String delProj = "DELETE FROM Projects WHERE Project_id = ?";
-
-    try (conn;
-        PreparedStatement stmt = conn.prepareStatement(delProj)) {
-      stmt.setInt(1, this.project.id);
-      stmt.executeUpdate();
-
-      this.user.relatedProjects.remove(this.project);
-
+    if (this.user.deleteProject(conn, this.project)) {
       System.out.println("Đã xóa project");
-
-    } catch (Exception e) {
-      System.out.println("Lỗi xóa project" + e);
     }
-  } // Sau khi xóa project, instance owner phải bị xóa role, trả về user và trở về dashboard
+  }
 
   @Override
   public projects viewProjectInfo() {
@@ -183,29 +219,30 @@ public class owners implements projectsManage {
   @Override
   public ArrayList<projectsAssignments> viewMembers(Connection conn) throws SQLException {
     String sql =
-        "SELECT u.id, u.lname, u.fname, u.username, u.gmail, u.phone, u.dob, "
+        "SELECT u.id, u.lname, u.fname, u.username, u.password, u.gmail, u.phone, u.dob, "
             + "pa.role, pa.assignat "
-            + "FROM ProjectsAssgiments pa "
+            + "FROM projectsassgiments pa "
             + "JOIN users u ON u.id = pa.user_id "
-            + "WHERE pa.Project_id = ?";
+            + "WHERE pa.project_id = ? "
+            + "ORDER BY CASE WHEN pa.role = 'owner' THEN 0 ELSE 1 END, u.lname, u.fname";
     ArrayList<projectsAssignments> list = new ArrayList<>();
     try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-      stmt.setInt(1, this.project.id);
+      stmt.setInt(1, this.project.getId());
       try (ResultSet rs = stmt.executeQuery()) {
         while (rs.next()) {
-          users u =
+          users member =
               new users(
                   rs.getInt("id"),
                   rs.getString("lname"),
                   rs.getString("fname"),
                   rs.getString("username"),
-                  null,
+                  rs.getString("password"),
                   rs.getString("gmail"),
                   rs.getString("phone"),
-                  rs.getString("dob"));
+                  Dates.formatUi(rs.getDate("dob")));
           list.add(
               new projectsAssignments(
-                  u,
+                  member,
                   this.project,
                   rs.getObject("assignat", LocalDateTime.class),
                   rs.getString("role")));
@@ -216,52 +253,65 @@ public class owners implements projectsManage {
   }
 
   @Override
-  public projectsAssignments viewMemberInfo(Connection conn, users k) throws SQLException {
-    if (k == null) return null;
-    return new members(this.user, this.project).viewMemberInfo(conn, k);
+  public projectsAssignments viewMemberInfo(Connection conn, users user) throws SQLException {
+    if (user == null) {
+      return null;
+    }
+    return new members(this.user, this.project).viewMemberInfo(conn, user);
   }
 
   @Override
   public Double viewOverallProgress() {
-    int goal = this.project.tasksList.size();
-    int cnt = 0;
-    for (tasks t : this.project.tasksList) {
-      if (t.taskStatus.equals("Hoàn thành")) cnt += 1;
+    ArrayList<tasks> list = this.project.getTasksList();
+    if (list == null || list.isEmpty()) {
+      return 0.0;
     }
-    return (double) (cnt / goal);
+    int done = 0;
+    for (tasks task : list) {
+      if ("DONE".equalsIgnoreCase(task.getTaskStatus())
+          || "Hoàn thành".equalsIgnoreCase(task.getTaskStatus())) {
+        done++;
+      }
+    }
+    return (double) done / list.size();
   }
 
   @Override
-  public Double viewMemberProgress(Connection conn, members k) {
-    if (k == null) {
+  public Double viewMemberProgress(Connection conn, members member) {
+    if (member == null) {
       return 0.0;
     }
-    return k.viewMemberProgress(conn, k);
+    return member.viewMemberProgress(conn, member);
   }
 
   @Override
   public ArrayList<tasks> viewTasks() {
-    return this.project.tasksList;
+    return this.project.getTasksList();
   }
 
-  public tasks viewTasksInfo(tasks tk) {
-    return tk;
+  public tasks viewTasksInfo(tasks task) {
+    return task;
   }
 
   @Override
-  public void commentTask(Connection conn, tasks Tasks, String comment) {
-    String sql = "INSERT INTO Comments VALUES(?,?,?);";
-    try (conn;
-        PreparedStatement ins = conn.prepareStatement(sql)) {
-      ins.setInt(1, Tasks.taskid);
+  public void commentTask(Connection conn, tasks task, String comment) {
+    if (task == null || comment == null || comment.isBlank() || conn == null) {
+      return;
+    }
+    String sql =
+        "INSERT INTO comments(taskid, fromwhom, commentdetail) VALUES(?, ?, ?)";
+    try (PreparedStatement ins = conn.prepareStatement(sql)) {
+      ins.setInt(1, task.getTaskid());
       ins.setInt(2, this.user.userId);
-      ins.setString(3, comment);
+      ins.setString(3, comment.trim());
       ins.executeUpdate();
-      Tasks.commentsList.put(this.user, comment);
-      System.out.println("Da gui comment");
-
-    } catch (Exception e) {
-      System.out.println("Khong the comments, xin thu lai " + e);
+      if (task.commentsList == null) {
+        task.commentsList = new LinkedHashMap<>();
+      }
+      task.commentsList.put(this.user, comment.trim());
+      System.out.println("Đã gửi bình luận");
+    } catch (SQLException e) {
+      System.out.println("Không thể bình luận: " + e.getMessage());
     }
   }
 }

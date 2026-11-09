@@ -5,7 +5,9 @@ import com.java.teamtask.ui.components.NavItem;
 import com.java.teamtask.ui.components.Sidebar;
 import com.java.teamtask.ui.screens.DashboardScreen;
 import com.java.teamtask.ui.screens.LoginScreen;
+import com.java.teamtask.ui.screens.ProjectDetailScreen;
 import com.java.teamtask.ui.screens.TaskFormScreen;
+import com.java.teamtask.ui.theme.Layout;
 import com.java.teamtask.ui.theme.Space;
 import com.java.teamtask.ui.theme.Theme;
 import org.junit.jupiter.api.Assumptions;
@@ -19,14 +21,16 @@ import java.awt.Component;
 import java.awt.Container;
 import java.awt.GraphicsEnvironment;
 import java.awt.event.ComponentEvent;
+import java.util.List;
 import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** Kiểm tra shell, breakpoint, sidebar và bề rộng form trong cửa sổ thật. */
+/** Kiểm tra shell, breakpoint, sidebar động và bề rộng card đăng nhập. */
 class ShellLayoutTest {
     @BeforeAll
     static void setUp() {
@@ -36,7 +40,8 @@ class ShellLayoutTest {
 
     @Test
     void shellRespectsMaxWidthAndBreakpoints() throws Exception {
-        MainFrame frame = createFrame(1360, 900, true);
+        TestGateway gateway = new TestGateway();
+        MainFrame frame = createFrame(gateway, 1360, 900, true);
         try {
             AppRootPanel appRoot = find(frame.getContentPane(), AppRootPanel.class);
             assertNotNull(appRoot);
@@ -44,30 +49,39 @@ class ShellLayoutTest {
             Sidebar sidebar = find(shell, Sidebar.class);
             JScrollPane scroll = find(shell, JScrollPane.class);
             DashboardScreen dashboard = find(shell, DashboardScreen.class);
-            TaskFormScreen form = find(shell, TaskFormScreen.class);
             assertNotNull(sidebar);
             assertNotNull(scroll);
             assertNotNull(dashboard);
-            assertNotNull(form);
+            assertNull(find(shell, TaskFormScreen.class),
+                    "Màn hình form cũ không còn nằm trong shell");
 
-            int contentWidth = frame.getContentPane().getWidth();
-            assertEquals(Math.min(contentWidth - 56, 1280), shell.getWidth());
-            assertEquals((contentWidth - shell.getWidth()) / 2, shell.getX(), 1);
+            java.awt.Insets page = Layout.pagePadding(appRoot.getWidth());
+            assertEquals(Math.min(appRoot.getWidth() - page.left - page.right, Layout.SHELL_MAX_WIDTH),
+                    shell.getWidth());
+            assertEquals((appRoot.getWidth() - shell.getWidth()) / 2, shell.getX(), 1);
             assertEquals(270, sidebar.getWidth());
 
             JComponent view = (JComponent) scroll.getViewport().getView();
-            assertTrue(form.getPreferredSize().height > dashboard.getPreferredSize().height,
-                    "Màn hình form phải cao hơn dashboard");
             assertEquals(dashboard.getPreferredSize().height, view.getPreferredSize().height,
                     "Vùng cuộn phải lấy chiều cao màn hình đang hiển thị");
 
             NavItem projectNav = findNav(sidebar, "Website Redesign");
+            NavItem dashboardNav = findNav(sidebar, "Tổng quan");
             NavItem projectsNav = findNav(sidebar, "Dự án");
-            assertNotNull(projectNav);
+            assertNotNull(projectNav, "Sidebar phải hiển thị dự án của người dùng");
             assertNotNull(projectsNav);
+            assertNotNull(dashboardNav);
+
             SwingUtilities.invokeAndWait(projectNav::doClick);
             assertTrue(projectNav.isSelected(), "Mục dự án vừa chọn phải giữ trạng thái active");
             assertFalse(projectsNav.isSelected());
+            ProjectDetailScreen detail = find(shell, ProjectDetailScreen.class);
+            assertNotNull(detail);
+            assertTrue(detail.isVisible(), "Chọn dự án phải mở màn hình chi tiết");
+
+            SwingUtilities.invokeAndWait(dashboardNav::doClick);
+            assertTrue(dashboard.isVisible(), "Quay lại Tổng quan phải hiện dashboard");
+            assertFalse(detail.isVisible());
 
             SwingUtilities.invokeAndWait(() -> {
                 frame.setSize(1024, 700);
@@ -76,8 +90,9 @@ class ShellLayoutTest {
                 frame.validate();
             });
             assertEquals(220, sidebar.getWidth(), "Dưới 1024px sidebar co còn 220px");
-            contentWidth = frame.getContentPane().getWidth();
-            assertEquals(Math.min(contentWidth - 40, 1280), shell.getWidth());
+            page = Layout.pagePadding(appRoot.getWidth());
+            assertEquals(Math.min(appRoot.getWidth() - page.left - page.right, Layout.SHELL_MAX_WIDTH),
+                    shell.getWidth());
         } finally {
             SwingUtilities.invokeAndWait(frame::dispose);
         }
@@ -85,7 +100,8 @@ class ShellLayoutTest {
 
     @Test
     void loginCardKeepsFixedWidthAndCenters() throws Exception {
-        MainFrame frame = createFrame(1360, 900, false);
+        TestGateway gateway = new TestGateway();
+        MainFrame frame = createFrame(gateway, 1360, 900, false);
         try {
             LoginScreen login = find(frame.getContentPane(), LoginScreen.class);
             assertNotNull(login);
@@ -110,33 +126,35 @@ class ShellLayoutTest {
     }
 
     @Test
-    void taskFormCardWidthIsCapped() throws Exception {
-        TaskFormScreen form = onEdt(() -> new TaskFormScreen(() -> {
-        }, task -> {
-        }));
-        Card card = find(form, Card.class);
-        assertNotNull(card);
-        assertEquals(640, card.getPreferredSize().width);
+    void sidebarReflectsCurrentUserProjectList() throws Exception {
+        TestGateway gateway = new TestGateway();
+        Sidebar[] sidebar = new Sidebar[1];
+        SwingUtilities.invokeAndWait(() -> {
+            sidebar[0] = new Sidebar("Nguyễn An", key -> {});
+            sidebar[0].setProjects(List.of(gateway.anOwner, gateway.anMember));
+        });
 
-        onEdt(() -> form.setMaxWidth(420));
-        assertEquals(420, card.getPreferredSize().width);
+        assertNotNull(findNav(sidebar[0], "Website Redesign"));
+        assertNotNull(findNav(sidebar[0], "Mobile App"));
+        assertNull(findNav(sidebar[0], "Dự án bí mật"),
+                "Sidebar không được hiển thị dự án ngoài phạm vi");
 
-        onEdt(() -> form.setMaxWidth(2000));
-        assertEquals(640, card.getPreferredSize().width);
-
-        onEdt(() -> form.setMaxWidth(100));
-        assertEquals(320, card.getPreferredSize().width);
+        SwingUtilities.invokeAndWait(() -> sidebar[0].setProjects(List.of()));
+        assertNull(findNav(sidebar[0], "Website Redesign"),
+                "Đổi user phải xoá các mục dự án cũ");
+        assertNull(findNav(sidebar[0], "Mobile App"));
     }
 
-    private static MainFrame createFrame(int width, int height, boolean showApp) throws Exception {
+    private static MainFrame createFrame(
+            TestGateway gateway, int width, int height, boolean signedIn) throws Exception {
         MainFrame[] holder = new MainFrame[1];
         SwingUtilities.invokeAndWait(() -> {
-            MainFrame frame = new MainFrame();
+            MainFrame frame = new MainFrame(gateway);
             frame.addNotify();
             frame.setSize(width, height);
             frame.validate();
-            if (showApp) {
-                frame.showApp();
+            if (signedIn) {
+                frame.signIn(gateway.an);
                 frame.validate();
             }
             holder[0] = frame;
@@ -176,9 +194,5 @@ class ShellLayoutTest {
         @SuppressWarnings("unchecked")
         T typed = (T) result[0];
         return typed;
-    }
-
-    private static void onEdt(Runnable runnable) throws Exception {
-        SwingUtilities.invokeAndWait(runnable);
     }
 }

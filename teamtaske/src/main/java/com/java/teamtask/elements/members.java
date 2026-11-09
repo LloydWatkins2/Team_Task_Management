@@ -1,20 +1,29 @@
 package com.java.teamtask.elements;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 
+/** Hành động của member trong một project: chỉ xem và bình luận. */
 public class members implements seeProjects {
-  private users user;
-  private projects project;
+  private final users user;
+  private final projects project;
 
-  public members(users User, projects Project) {
-    this.user = User;
-    this.project = Project;
+  public members(users user, projects project) {
+    this.user = user;
+    this.project = project;
   }
 
   public users getUser() {
     return this.user;
+  }
+
+  public projects getProject() {
+    return this.project;
   }
 
   @Override
@@ -25,28 +34,30 @@ public class members implements seeProjects {
   @Override
   public ArrayList<projectsAssignments> viewMembers(Connection conn) throws SQLException {
     String sql =
-        "SELECT u.id, u.lname, u.fname, u.username, u.gmail, u.phone, u.dob, pa.role, pa.assignat "
-            + "FROM ProjectsAssgiments AS pa "
-            + "JOIN users AS u ON u.id = pa.user_id "
-            + "WHERE pa.Project_id = ?";
+        "SELECT u.id, u.lname, u.fname, u.username, u.password, u.gmail, u.phone, u.dob, "
+            + "pa.role, pa.assignat "
+            + "FROM projectsassgiments pa "
+            + "JOIN users u ON u.id = pa.user_id "
+            + "WHERE pa.project_id = ? "
+            + "ORDER BY CASE WHEN pa.role = 'owner' THEN 0 ELSE 1 END, u.lname, u.fname";
     ArrayList<projectsAssignments> list = new ArrayList<>();
     try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-      stmt.setLong(1, this.project.id);
+      stmt.setInt(1, this.project.getId());
       try (ResultSet rs = stmt.executeQuery()) {
         while (rs.next()) {
-          users u =
+          users member =
               new users(
                   rs.getInt("id"),
                   rs.getString("lname"),
                   rs.getString("fname"),
                   rs.getString("username"),
-                  null,
+                  rs.getString("password"),
                   rs.getString("gmail"),
                   rs.getString("phone"),
-                  rs.getString("dob"));
+                  Dates.formatUi(rs.getDate("dob")));
           list.add(
               new projectsAssignments(
-                  u,
+                  member,
                   this.project,
                   rs.getObject("assignat", LocalDateTime.class),
                   rs.getString("role")));
@@ -58,91 +69,127 @@ public class members implements seeProjects {
 
   @Override
   public Double viewOverallProgress() {
-    int goal = this.project.tasksList.size();
-    int cnt = 0;
-    for (tasks t : this.project.tasksList) {
-      if (t.taskStatus.equals("Hoàn thành")) cnt += 1;
+    ArrayList<tasks> list = this.project.getTasksList();
+    if (list == null || list.isEmpty()) {
+      return 0.0;
     }
-    return (double) (cnt / goal);
+    int done = 0;
+    for (tasks task : list) {
+      if (isDone(task.getTaskStatus())) {
+        done++;
+      }
+    }
+    return (double) done / list.size();
   }
 
   @Override
-  public Double viewMemberProgress(Connection conn, members k) {
-    if (k == null
-        || k.user == null
+  public Double viewMemberProgress(Connection conn, members member) {
+    if (member == null
+        || member.user == null
         || this.project == null
-        || this.project.tasksList == null
-        || this.project.tasksList.isEmpty()) {
+        || this.project.getTasksList().isEmpty()) {
       return 0.0;
     }
     int goal = 0;
-    int cnt = 0;
-    for (tasks t : this.project.tasksList) {
-      if (t.assginee != null && t.assginee.userId == k.user.userId) {
+    int done = 0;
+    for (tasks task : this.project.getTasksList()) {
+      if (task.getAssginee() != null && task.getAssginee().userId == member.user.userId) {
         goal++;
-        if ("Hoàn thành".equalsIgnoreCase(t.taskStatus)) {
-          cnt++;
+        if (isDone(task.getTaskStatus())) {
+          done++;
         }
       }
     }
-    if (goal == 0) return 0.0;
-    return (double) cnt / goal;
+    if (goal == 0) {
+      return 0.0;
+    }
+    return (double) done / goal;
   }
 
   @Override
   public ArrayList<tasks> viewTasks() {
-    return this.project.tasksList;
-  } // xem thông tin chi tiết của task
+    return this.project.getTasksList();
+  }
 
-  public tasks viewTasksInfo(tasks tk) {
-    return tk;
+  public tasks viewTasksInfo(tasks task) {
+    return task;
   }
 
   @Override
-  public projectsAssignments viewMemberInfo(Connection conn, users k) throws SQLException {
-    if (k == null) return null;
+  public projectsAssignments viewMemberInfo(Connection conn, users target) throws SQLException {
+    if (target == null || conn == null) {
+      return null;
+    }
     String sql =
-        "SELECT u.id, u.lname, u.fname, u.username, u.gmail, u.phone, u.dob, "
+        "SELECT u.id, u.lname, u.fname, u.username, u.password, u.gmail, u.phone, u.dob, "
             + "pa.role, pa.assignat "
             + "FROM users u "
-            + "JOIN ProjectsAssgiments pa ON u.id = pa.user_id "
-            + "WHERE u.id = ? AND pa.Project_id = ?";
+            + "JOIN projectsassgiments pa ON u.id = pa.user_id "
+            + "WHERE u.id = ? AND pa.project_id = ?";
     try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-      stmt.setInt(1, k.userId);
-      stmt.setInt(2, this.project.id);
+      stmt.setInt(1, target.userId);
+      stmt.setInt(2, this.project.getId());
       try (ResultSet rs = stmt.executeQuery()) {
-        if (rs.next()) {
-          users u =
-              new users(
-                  rs.getInt("id"),
-                  rs.getString("lname"),
-                  rs.getString("fname"),
-                  rs.getString("username"),
-                  null,
-                  rs.getString("gmail"),
-                  rs.getString("phone"),
-                  rs.getString("dob"));
-          return new projectsAssignments(
-              u, this.project, rs.getObject("assignat", LocalDateTime.class), rs.getString("role"));
+        if (!rs.next()) {
+          return null;
         }
+        users member =
+            new users(
+                rs.getInt("id"),
+                rs.getString("lname"),
+                rs.getString("fname"),
+                rs.getString("username"),
+                rs.getString("password"),
+                rs.getString("gmail"),
+                rs.getString("phone"),
+                Dates.formatUi(rs.getDate("dob")));
+        return new projectsAssignments(
+            member,
+            this.project,
+            rs.getObject("assignat", LocalDateTime.class),
+            rs.getString("role"));
       }
     }
-    return null;
   }
 
-  public void commentTask(Connection conn, tasks Tasks, String comment) {
-    String sql = "INSERT INTO Comments VALUES(?,?,?);";
-    try (conn;
-        PreparedStatement ins = conn.prepareStatement(sql)) {
-      ins.setInt(1, Tasks.taskid);
-      ins.setInt(2, this.user.userId);
-      ins.setString(3, comment);
-      ins.executeUpdate();
-      Tasks.commentsList.put(this.user, comment);
-      System.out.println("Da gui comment");
-
-    } catch (Exception e) {
-      System.out.println("Khong the comments, xin thu lai " + e);
+  @Override
+  public void commentTask(Connection conn, tasks task, String comment) {
+    if (task == null || comment == null || comment.isBlank() || conn == null) {
+      return;
     }
+    String sql =
+        "INSERT INTO comments(taskid, fromwhom, commentdetail) VALUES(?, ?, ?)";
+    try (PreparedStatement ins = conn.prepareStatement(sql)) {
+      ins.setInt(1, task.getTaskid());
+      ins.setInt(2, this.user.userId);
+      ins.setString(3, comment.trim());
+      ins.executeUpdate();
+      if (task.commentsList == null) {
+        task.commentsList = new LinkedHashMap<>();
+      }
+      task.commentsList.put(this.user, comment.trim());
+      System.out.println("Đã gửi bình luận");
+    } catch (SQLException e) {
+      System.out.println("Không thể bình luận: " + e.getMessage());
+    }
+  }
+
+  /**
+   * Thành viên chỉ được cập nhật trạng thái cho task được giao cho chính mình. Trả về true nếu cập
+   * nhật thành công.
+   */
+  public boolean updateAssignedTaskStatus(Connection conn, tasks task, String status) {
+    if (conn == null || task == null || status == null || status.isBlank()) {
+      return false;
+    }
+    if (task.getAssginee() == null || task.getAssginee().userId != this.user.userId) {
+      System.out.println("Bạn chỉ có thể cập nhật trạng thái công việc được giao cho mình.");
+      return false;
+    }
+    return task.updateStatus(conn, status);
+  }
+
+  private static boolean isDone(String status) {
+    return "DONE".equalsIgnoreCase(status) || "Hoàn thành".equalsIgnoreCase(status);
   }
 }

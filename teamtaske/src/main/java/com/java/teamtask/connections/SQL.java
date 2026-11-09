@@ -6,182 +6,323 @@ import com.zaxxer.hikari.HikariDataSource;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 
-/** sql */
+/** Lớp truy cập cơ sở dữ liệu dùng chung. */
 public class SQL {
-  public static HikariDataSource connectionsPoolInit(String url, String username, String password) {
+  private SQL() {}
 
+  public static HikariDataSource connectionsPoolInit(
+      String url, String username, String password) {
     HikariConfig config = new HikariConfig();
     config.setJdbcUrl(url);
     config.setUsername(username);
     config.setPassword(password);
-
     config.setMaximumPoolSize(10);
     config.setIdleTimeout(30000);
     config.setMaxLifetime(1800000);
-
     return new HikariDataSource(config);
   }
 
+  /**
+   * Tạo bảng nếu chưa tồn tại. Không đóng connection truyền vào — người gọi chịu trách nhiệm đóng.
+   */
   public static void createTables(Connection conn) {
-    try (conn) {
-      if (conn != null) {
-        ArrayList<String> tabs = new ArrayList<>();
-        tabs.add(
-            "CREATE TABLE IF NOT EXISTS users (\n"
-                + "id SERIAL PRIMARY KEY,\n"
-                + "lname VARCHAR(30) NOT NULL,\n"
-                + "fname VARCHAR(20) NOT NULL,\n"
-                + "username VARCHAR(30) NOT NULL,\n"
-                + "password VARCHAR(255) NOT NULL,\n"
-                + "gmail VARCHAR(30) NOT NULL,\n"
-                + "phone VARCHAR(15),\n"
-                + "dob TEXT\n"
-                + ");");
+    if (conn == null) {
+      return;
+    }
+    ArrayList<String> tables = new ArrayList<>();
+    tables.add(
+        """
+        CREATE TABLE IF NOT EXISTS users (
+          id BIGSERIAL PRIMARY KEY,
+          lname VARCHAR(30) NOT NULL,
+          fname VARCHAR(20) NOT NULL,
+          username VARCHAR(30) NOT NULL UNIQUE,
+          password VARCHAR(255) NOT NULL,
+          gmail VARCHAR(120) NOT NULL UNIQUE,
+          phone VARCHAR(15),
+          dob DATE
+        )
+        """);
+    tables.add(
+        """
+        CREATE TABLE IF NOT EXISTS projects (
+          projectid BIGSERIAL PRIMARY KEY,
+          name TEXT NOT NULL,
+          description TEXT NOT NULL,
+          deadline TIMESTAMP NOT NULL,
+          create_at TIMESTAMP NOT NULL,
+          update_at TIMESTAMP NOT NULL
+        )
+        """);
+    tables.add(
+        """
+        CREATE TABLE IF NOT EXISTS projectsassgiments (
+          user_id BIGINT NOT NULL REFERENCES users(id),
+          project_id BIGINT NOT NULL REFERENCES projects(projectid),
+          role TEXT NOT NULL DEFAULT 'member',
+          assignat TIMESTAMP,
+          PRIMARY KEY (user_id, project_id)
+        )
+        """);
+    tables.add(
+        """
+        CREATE TABLE IF NOT EXISTS tasks (
+          taskid BIGSERIAL PRIMARY KEY,
+          taskname TEXT NOT NULL,
+          taskdescription TEXT NOT NULL,
+          taskdeadline TIMESTAMP NOT NULL,
+          taskstatus VARCHAR(20) NOT NULL DEFAULT 'TODO',
+          taskcreatedat TIMESTAMP NOT NULL,
+          tasklastupdatedat TIMESTAMP NOT NULL,
+          user_id BIGINT NOT NULL REFERENCES users(id),
+          project_id BIGINT NOT NULL REFERENCES projects(projectid)
+        )
+        """);
+    tables.add(
+        """
+        CREATE TABLE IF NOT EXISTS comments (
+          commentid BIGSERIAL PRIMARY KEY,
+          taskid BIGINT NOT NULL REFERENCES tasks(taskid),
+          fromwhom BIGINT NOT NULL REFERENCES users(id),
+          commentdetail TEXT NOT NULL
+        )
+        """);
 
-        tabs.add(
-            "CREATE TABLE IF NOT EXISTS Projects (\n"
-                + "Project_id SERIAL PRIMARY KEY,\n"
-                + "Name TEXT NOT NULL,\n"
-                + "Description TEXT NOT NULL,\n"
-                + "Deadline TIMESTAMP NOT NULL,\n"
-                + "Create_at TIMESTAMP NOT NULL,\n"
-                + "Update_at TIMESTAMP NOT NULL\n"
-                + ");");
-
-        tabs.add(
-            "CREATE TABLE IF NOT EXISTS ProjectsAssgiments (\n"
-                + "user_id INT NOT NULL,\n"
-                + "Project_id INT NOT NULL,\n"
-                + "role TEXT DEFAULT 'member',\n"
-                + "assignat TIMESTAMP,\n"
-                + "FOREIGN KEY (user_id) REFERENCES users(id),\n"
-                + "FOREIGN KEY (Project_id) REFERENCES Projects(Projectid),\n"
-                + "PRIMARY KEY(user_id, Project_id)\n"
-                + ");");
-
-        tabs.add(
-            "CREATE TABLE IF NOT EXISTS Tasks (\n"
-                + "taskid SERIAL PRIMARY KEY,\n"
-                + "taskName TEXT NOT NULL,\n"
-                + "taskDescription TEXT NOT NULL,\n"
-                + "taskDeadline TIMESTAMP NOT NULL,\n"
-                + "taskStatus VARCHAR(20) NOT NULL DEFAULT 'pending',\n"
-                + "taskCreatedAt TIMESTAMP NOT NULL,\n"
-                + "taskLastUpdatedAt TIMESTAMP NOT NULL,\n"
-                + "user_id INT NOT NULL,\n"
-                + "Project_id INT NOT NULL,\n"
-                + "FOREIGN KEY (Project_id) REFERENCES Projects(Project_id) ON DELETE CASCADE\n"
-                + "FOREIGN KEY (Project_id) REFERENCES Projects(Project_id)\n"
-                + ");");
-
-        tabs.add(
-            "CREATE TABLE IF NOT EXISTS Comments (\n"
-                + "commentid SERIAL PRIMARY KEY,\n"
-                + "taskid INT NOT NULL,\n"
-                + "fromwhom INT NOT NULL,\n"
-                + "commentdetail TEXT NOT NULL,\n"
-                + "FOREIGN KEY (taskid) REFERENCES Tasks(taskid) ON DELETE CASCADE,\n"
-                + "FOREIGN KEY (fromwhom) REFERENCES users(id) ON DELETE CASCADE\n"
-                + ");");
-        try (Statement st = conn.createStatement()) {
-          for (String sql : tabs) {
-            st.execute(sql);
-            System.out.println("created table user");
-          }
-        }
+    try (Statement st = conn.createStatement()) {
+      for (String sql : tables) {
+        st.execute(sql);
       }
-    } catch (Exception e) {
-      System.out.println("Loi db " + e);
+    } catch (SQLException e) {
+      System.out.println("Loi tao bang: " + e.getMessage());
     }
   }
 
-  public static HashMap<projects, projectsAssignments> selectRelatedProject(
-      Connection conn, users user) {
-    String projectSql =
-        "SELECT p.Project_id, p.Name, p.Description, p.Deadline, p.Create_at, p.Update_at, "
-            + "pa.role, pa.assignat "
-            + "FROM Projects p "
-            + "JOIN ProjectsAssgiments pa ON p.Project_id = pa.Project_id "
-            + "WHERE pa.user_id = ?";
-
-    String taskSql =
-        "SELECT t.taskid, t.taskName, t.taskDescription, t.taskStatus,t.taskDeadline "
-            + "t.taskCreatedAt, t.taskLastUpdatedAt, "
-            + "u.id AS uid, u.lname, u.fname, u.username, u.password, u.gmail, u.phone, u.dob "
-            + "FROM Tasks t "
-            + "JOIN users u ON t.user_id = u.id "
-            + "WHERE t.Project_id = ?";
-
-    try (conn;
-        PreparedStatement getProject = conn.prepareStatement(projectSql);
-        PreparedStatement getTask = conn.prepareStatement(taskSql)) {
-
-      HashMap<projects, projectsAssignments> ans = new HashMap<>();
-      getProject.setInt(1, user.userId);
-
-      try (ResultSet rs = getProject.executeQuery()) {
-        while (rs.next()) {
-          int projectId = rs.getInt("p.Projectid");
-
-          // Lấy danh sách task của project này
-          ArrayList<tasks> list = new ArrayList<>();
-          getTask.setInt(1, projectId);
-          try (ResultSet rst = getTask.executeQuery()) {
-            while (rst.next()) {
-              users assignee =
-                  new users(
-                      rst.getInt("uid"),
-                      rst.getString("u.lname"),
-                      rst.getString("u.fname"),
-                      rst.getString("u.username"),
-                      rst.getString("u.password"),
-                      rst.getString("u.gmail"),
-                      rst.getString("u.phone"),
-                      rst.getString("u.dob"));
-
-              list.add(
-                  new tasks(
-                      rst.getInt("t.taskid"),
-                      rst.getString("t.taskName"),
-                      rst.getString("t.taskDescription"),
-                      rst.getString("t.taskStatus"),
-                      rst.getObject("t.taskCreatedAt", LocalDateTime.class),
-                      rst.getObject("t.taskLastUpdatedAt", LocalDateTime.class),
-                      rst.getObject("t.taskDeadline", LocalDateTime.class),
-                      assignee,
-                      conn));
-            }
-          }
-
-          projects p =
-              new projects(
-                  (int) projectId,
-                  rs.getString("p.Name"),
-                  rs.getString("p.Description"),
-                  rs.getObject("p.Deadline", LocalDateTime.class),
-                  rs.getObject("p.Create_at", LocalDateTime.class),
-                  rs.getObject("p.Update_at", LocalDateTime.class),
-                  list);
-
-          LocalDateTime assignAt = rs.getObject("pa.assignat", LocalDateTime.class);
-          ans.put(
-              p,
-              new projectsAssignments(
-                  user, p, assignAt == null ? null : assignAt, rs.getString("pa.role")));
-        }
-      }
-
-      if (ans.isEmpty()) {
-        System.out.println("no project created");
-        return null;
-      }
-      return ans;
-
-    } catch (Exception e) {
-      System.out.println("loi truy van: " + e);
+  public static users findUserByIdentifier(Connection conn, String identifier)
+      throws SQLException {
+    if (identifier == null || identifier.isBlank()) {
       return null;
     }
+    String sql =
+        "SELECT id, lname, fname, username, password, gmail, phone, dob "
+            + "FROM users WHERE username = ? OR gmail = ? LIMIT 1";
+    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+      stmt.setString(1, identifier.trim());
+      stmt.setString(2, identifier.trim());
+      try (ResultSet rs = stmt.executeQuery()) {
+        return rs.next() ? readUser(rs) : null;
+      }
+    }
+  }
+
+  public static users findUserById(Connection conn, int userId) throws SQLException {
+    String sql =
+        "SELECT id, lname, fname, username, password, gmail, phone, dob "
+            + "FROM users WHERE id = ?";
+    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+      stmt.setInt(1, userId);
+      try (ResultSet rs = stmt.executeQuery()) {
+        return rs.next() ? readUser(rs) : null;
+      }
+    }
+  }
+
+  public static users findUserByUsernameOrGmail(Connection conn, String identifier)
+      throws SQLException {
+    return findUserByIdentifier(conn, identifier);
+  }
+
+  public static String findRole(Connection conn, int userId, int projectId)
+      throws SQLException {
+    String sql =
+        "SELECT role FROM projectsassgiments WHERE user_id = ? AND project_id = ?";
+    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+      stmt.setInt(1, userId);
+      stmt.setInt(2, projectId);
+      try (ResultSet rs = stmt.executeQuery()) {
+        return rs.next() ? rs.getString("role") : null;
+      }
+    }
+  }
+
+  public static projectsAssignments findAssignment(
+      Connection conn, users user, projects project) throws SQLException {
+    String sql =
+        "SELECT role, assignat FROM projectsassgiments WHERE user_id = ? AND project_id = ?";
+    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+      stmt.setInt(1, user.userId);
+      stmt.setInt(2, project.getId());
+      try (ResultSet rs = stmt.executeQuery()) {
+        if (!rs.next()) {
+          return null;
+        }
+        return new projectsAssignments(
+            user,
+            project,
+            rs.getObject("assignat", LocalDateTime.class),
+            rs.getString("role"));
+      }
+    }
+  }
+
+  /**
+   * Lấy toàn bộ project liên quan tới user kèm role và danh sách task.
+   *
+   * <p>Chỉ các project có assignment của user mới được trả về.
+   */
+  public static LinkedHashMap<projects, projectsAssignments> selectRelatedProject(
+      Connection conn, users user) {
+    LinkedHashMap<projects, projectsAssignments> result = new LinkedHashMap<>();
+    if (conn == null || user == null) {
+      return result;
+    }
+
+    String projectSql =
+        "SELECT p.projectid, p.name, p.description, p.deadline, p.create_at, p.update_at, "
+            + "pa.role, pa.assignat "
+            + "FROM projects p "
+            + "JOIN projectsassgiments pa ON p.projectid = pa.project_id "
+            + "WHERE pa.user_id = ? "
+            + "ORDER BY p.deadline NULLS LAST, p.name";
+
+    try (PreparedStatement getProjects = conn.prepareStatement(projectSql)) {
+      getProjects.setInt(1, user.userId);
+      try (ResultSet rs = getProjects.executeQuery()) {
+        while (rs.next()) {
+          int projectId = rs.getInt("projectid");
+          ArrayList<tasks> taskList = selectTasksByProject(conn, projectId);
+          projects project =
+              new projects(
+                  projectId,
+                  rs.getString("name"),
+                  rs.getString("description"),
+                  rs.getObject("deadline", LocalDateTime.class),
+                  rs.getObject("create_at", LocalDateTime.class),
+                  rs.getObject("update_at", LocalDateTime.class),
+                  taskList);
+          result.put(
+              project,
+              new projectsAssignments(
+                  user,
+                  project,
+                  rs.getObject("assignat", LocalDateTime.class),
+                  rs.getString("role")));
+        }
+      }
+    } catch (SQLException e) {
+      System.out.println("Loi truy van project: " + e.getMessage());
+    }
+    return result;
+  }
+
+  public static ArrayList<tasks> selectTasksByProject(Connection conn, int projectId)
+      throws SQLException {
+    String sql =
+        "SELECT t.taskid, t.taskname, t.taskdescription, t.taskstatus, t.taskdeadline, "
+            + "t.taskcreatedat, t.tasklastupdatedat, "
+            + "u.id AS uid, u.lname, u.fname, u.username, u.password, u.gmail, u.phone, u.dob "
+            + "FROM tasks t "
+            + "JOIN users u ON t.user_id = u.id "
+            + "WHERE t.project_id = ? "
+            + "ORDER BY t.taskcreatedat";
+    ArrayList<tasks> list = new ArrayList<>();
+    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+      stmt.setInt(1, projectId);
+      try (ResultSet rs = stmt.executeQuery()) {
+        while (rs.next()) {
+          users assignee =
+              new users(
+                  rs.getInt("uid"),
+                  rs.getString("lname"),
+                  rs.getString("fname"),
+                  rs.getString("username"),
+                  rs.getString("password"),
+                  rs.getString("gmail"),
+                  rs.getString("phone"),
+                  Dates.formatUi(rs.getDate("dob")));
+          list.add(
+              new tasks(
+                  rs.getInt("taskid"),
+                  rs.getString("taskname"),
+                  rs.getString("taskdescription"),
+                  rs.getString("taskstatus"),
+                  rs.getObject("taskcreatedat", LocalDateTime.class),
+                  rs.getObject("tasklastupdatedat", LocalDateTime.class),
+                  rs.getObject("taskdeadline", LocalDateTime.class),
+                  assignee));
+        }
+      }
+    }
+    return list;
+  }
+
+  public static projects selectProjectById(Connection conn, int projectId) throws SQLException {
+    String sql =
+        "SELECT projectid, name, description, deadline, create_at, update_at "
+            + "FROM projects WHERE projectid = ?";
+    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+      stmt.setInt(1, projectId);
+      try (ResultSet rs = stmt.executeQuery()) {
+        if (!rs.next()) {
+          return null;
+        }
+        return new projects(
+            rs.getInt("projectid"),
+            rs.getString("name"),
+            rs.getString("description"),
+            rs.getObject("deadline", LocalDateTime.class),
+            rs.getObject("create_at", LocalDateTime.class),
+            rs.getObject("update_at", LocalDateTime.class),
+            selectTasksByProject(conn, projectId));
+      }
+    }
+  }
+
+  /** Dòng bình luận kèm người viết, dùng cho UI. */
+  public record CommentRow(int commentId, users author, String detail) {}
+
+  public static ArrayList<CommentRow> selectCommentsByTask(Connection conn, int taskId)
+      throws SQLException {
+    String sql =
+        "SELECT c.commentid, c.commentdetail, "
+            + "u.id AS uid, u.lname, u.fname, u.username, u.password, u.gmail, u.phone, u.dob "
+            + "FROM comments c "
+            + "JOIN users u ON c.fromwhom = u.id "
+            + "WHERE c.taskid = ? "
+            + "ORDER BY c.commentid";
+    ArrayList<CommentRow> list = new ArrayList<>();
+    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+      stmt.setInt(1, taskId);
+      try (ResultSet rs = stmt.executeQuery()) {
+        while (rs.next()) {
+          users author =
+              new users(
+                  rs.getInt("uid"),
+                  rs.getString("lname"),
+                  rs.getString("fname"),
+                  rs.getString("username"),
+                  rs.getString("password"),
+                  rs.getString("gmail"),
+                  rs.getString("phone"),
+                  Dates.formatUi(rs.getDate("dob")));
+          list.add(
+              new CommentRow(rs.getInt("commentid"), author, rs.getString("commentdetail")));
+        }
+      }
+    }
+    return list;
+  }
+
+  public static users readUser(ResultSet rs) throws SQLException {
+    return new users(
+        rs.getInt("id"),
+        rs.getString("lname"),
+        rs.getString("fname"),
+        rs.getString("username"),
+        rs.getString("password"),
+        rs.getString("gmail"),
+        rs.getString("phone"),
+        Dates.formatUi(rs.getDate("dob")));
   }
 }

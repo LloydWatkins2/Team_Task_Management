@@ -2,17 +2,18 @@ package com.java.teamtask.ui;
 
 import com.java.teamtask.ui.components.AppButton;
 import com.java.teamtask.ui.components.FormField;
-import com.java.teamtask.ui.sample.TaskItem;
-import com.java.teamtask.ui.screens.TaskFormScreen;
+import com.java.teamtask.ui.data.Validators;
+import com.java.teamtask.ui.screens.ProjectFormDialog;
+import com.java.teamtask.ui.screens.TaskCreateDialog;
 import com.java.teamtask.ui.theme.Theme;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import javax.swing.JDialog;
 import javax.swing.SwingUtilities;
 import java.awt.Component;
 import java.awt.Container;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
@@ -23,71 +24,129 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** Kiểm tra validate inline và tạo công việc của form. */
+/** Kiểm tra validate dùng chung và hai hộp thoại dự án/công việc. */
 class FormValidationTest {
-    private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-
     @BeforeAll
     static void installTheme() {
         Theme.install();
     }
 
     @Test
-    void emptyFormBlocksSaveAndShowsErrors() throws Exception {
-        TaskItem[] saved = new TaskItem[1];
-        TaskFormScreen form = onEdt(() -> new TaskFormScreen(() -> {
-        }, task -> saved[0] = task));
-        List<FormField> fields = findAll(form, FormField.class);
-        assertEquals(7, fields.size());
-        AppButton save = find(form, AppButton.class, button -> "Lưu".equals(button.getText()));
-        assertNotNull(save);
+    void requiredMessageMatchesSpecification() {
+        assertEquals("Please fill up this box!", Validators.REQUIRED);
+    }
+
+    @Test
+    void datesAreParsedStrictly() {
+        assertNull(Validators.parseDate("31/02/2026"), "Ngày không tồn tại phải bị từ chối");
+        assertNull(Validators.parseDate("2026-03-02"), "Sai định dạng phải bị từ chối");
+        assertNotNull(Validators.parseDate("02/03/2026"));
+        assertEquals("02/03/2026", Validators.formatDate(LocalDate.of(2026, 3, 2)));
+    }
+
+    @Test
+    void emptyProjectFormBlocksSaveAndShowsRequiredErrors() throws Exception {
+        ProjectFormDialog.Values[] saved = new ProjectFormDialog.Values[1];
+        ProjectFormDialog dialog = onEdt(() ->
+                new ProjectFormDialog(null, "Tạo dự án mới", "", "", null, values -> saved[0] = values));
+        List<FormField> fields = allFields(dialog);
+        assertEquals(3, fields.size());
+        AppButton save = findButton(dialog, "Lưu");
 
         SwingUtilities.invokeAndWait(save::doClick);
 
-        assertNull(saved[0], "Form rỗng không được lưu");
-        assertTrue(fields.get(0).hasError(), "Thiếu tên công việc phải báo lỗi");
-        assertTrue(fields.get(2).hasError(), "Thiếu hạn chót phải báo lỗi");
+        assertNull(saved[0]);
+        assertEquals(Validators.REQUIRED, fields.get(0).getErrorText());
+        assertEquals(Validators.REQUIRED, fields.get(2).getErrorText());
     }
 
     @Test
-    void invalidDeadlineIsRejected() throws Exception {
-        TaskItem[] saved = new TaskItem[1];
-        TaskFormScreen form = onEdt(() -> new TaskFormScreen(() -> {
-        }, task -> saved[0] = task));
-        List<FormField> fields = findAll(form, FormField.class);
-        AppButton save = find(form, AppButton.class, button -> "Lưu".equals(button.getText()));
+    void projectFormRejectsPastDeadline() throws Exception {
+        ProjectFormDialog.Values[] saved = new ProjectFormDialog.Values[1];
+        ProjectFormDialog dialog = onEdt(() ->
+                new ProjectFormDialog(null, "Tạo dự án mới", "", "", null, values -> saved[0] = values));
+        List<FormField> fields = allFields(dialog);
 
         SwingUtilities.invokeAndWait(() -> {
-            fields.get(0).setValue("Việc mới");
-            fields.get(2).setValue("31/02/2026");
-            save.doClick();
+            fields.get(0).setValue("Website mới");
+            fields.get(2).setValue(Validators.formatDate(LocalDate.now().minusDays(1)));
+            findButton(dialog, "Lưu").doClick();
         });
 
         assertNull(saved[0]);
-        assertTrue(fields.get(2).hasError());
+        assertTrue(fields.get(2).hasError(), "Hạn chót trước hôm nay phải bị chặn");
     }
 
     @Test
-    void validFormCreatesTaskAndResets() throws Exception {
-        TaskItem[] saved = new TaskItem[1];
-        TaskFormScreen form = onEdt(() -> new TaskFormScreen(() -> {
-        }, task -> saved[0] = task));
-        List<FormField> fields = findAll(form, FormField.class);
-        AppButton save = find(form, AppButton.class, button -> "Lưu".equals(button.getText()));
-        String deadline = LocalDate.now().plusDays(2).format(DATE);
+    void validProjectFormSubmitsValues() throws Exception {
+        ProjectFormDialog.Values[] saved = new ProjectFormDialog.Values[1];
+        ProjectFormDialog dialog = onEdt(() ->
+                new ProjectFormDialog(null, "Tạo dự án mới", "", "", null, values -> saved[0] = values));
+        List<FormField> fields = allFields(dialog);
+        String deadline = Validators.formatDate(LocalDate.now().plusDays(3));
+
+        SwingUtilities.invokeAndWait(() -> {
+            fields.get(0).setValue("Website mới");
+            fields.get(1).setValue("Mô tả dự án");
+            fields.get(2).setValue(deadline);
+            findButton(dialog, "Lưu").doClick();
+        });
+
+        assertNotNull(saved[0]);
+        assertEquals("Website mới", saved[0].name());
+        assertEquals("Mô tả dự án", saved[0].description());
+        assertEquals(LocalDate.now().plusDays(3), saved[0].deadline().toLocalDate());
+    }
+
+    @Test
+    void taskFormRequiresNameDeadlineAndAssignee() throws Exception {
+        TaskCreateDialog.Values[] saved = new TaskCreateDialog.Values[1];
+        TaskCreateDialog dialog = onEdt(() ->
+                new TaskCreateDialog(null, List.of(), values -> saved[0] = values));
+        List<FormField> fields = allFields(dialog);
+        assertEquals(5, fields.size());
+        AppButton save = findButton(dialog, "Lưu");
+
+        SwingUtilities.invokeAndWait(save::doClick);
+
+        assertNull(saved[0]);
+        assertEquals(Validators.REQUIRED, fields.get(0).getErrorText());
+        assertEquals(Validators.REQUIRED, fields.get(2).getErrorText());
+        assertTrue(fields.get(4).hasError(), "Thiếu người phụ trách phải báo lỗi");
+    }
+
+    @Test
+    void validTaskFormSubmitsDbStatusAndAssignee() throws Exception {
+        TestGateway gateway = new TestGateway();
+        TaskCreateDialog.Values[] saved = new TaskCreateDialog.Values[1];
+        TaskCreateDialog dialog = onEdt(() ->
+                new TaskCreateDialog(null, List.of(gateway.anOwner), values -> saved[0] = values));
+        List<FormField> fields = allFields(dialog);
+        String deadline = Validators.formatDate(LocalDate.now().plusDays(2));
 
         SwingUtilities.invokeAndWait(() -> {
             fields.get(0).setValue("Việc mới");
             fields.get(1).setValue("Mô tả ngắn");
             fields.get(2).setValue(deadline);
-            save.doClick();
+            fields.get(3).setSelected("Đang làm");
+            findButton(dialog, "Lưu").doClick();
         });
 
         assertNotNull(saved[0]);
-        assertEquals("Việc mới", saved[0].title());
-        assertEquals(deadline, saved[0].deadline());
+        assertEquals("Việc mới", saved[0].name());
+        assertEquals("Mô tả ngắn", saved[0].description());
+        assertEquals("IN_PROGRESS", saved[0].status(), "UI phải lưu status enum tiếng Anh");
+        assertEquals(LocalDate.now().plusDays(2), saved[0].deadline().toLocalDate());
+        assertEquals(gateway.an, saved[0].assignee());
         assertFalse(fields.get(0).hasError());
-        assertEquals("", fields.get(0).getValue(), "Form phải được reset sau khi lưu");
+    }
+
+    private static List<FormField> allFields(JDialog dialog) {
+        return findAll(dialog.getContentPane(), FormField.class);
+    }
+
+    private static AppButton findButton(Container root, String text) {
+        return find(root, AppButton.class, button -> text.equals(button.getText()));
     }
 
     private static <T extends Component> T find(Container root, Class<T> type, Predicate<T> filter) {

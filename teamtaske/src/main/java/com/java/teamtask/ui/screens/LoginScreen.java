@@ -1,22 +1,19 @@
 package com.java.teamtask.ui.screens;
 
+import com.java.teamtask.elements.users;
 import com.java.teamtask.ui.Card;
 import com.java.teamtask.ui.GradientPanel;
 import com.java.teamtask.ui.components.AppButton;
 import com.java.teamtask.ui.components.CircleIconPanel;
 import com.java.teamtask.ui.components.FormField;
+import com.java.teamtask.ui.data.DataAccessException;
+import com.java.teamtask.ui.data.SessionGateway;
 import com.java.teamtask.ui.theme.Icons;
 import com.java.teamtask.ui.theme.Palette;
 import com.java.teamtask.ui.theme.Space;
 import com.java.teamtask.ui.theme.Typography;
 import com.java.teamtask.ui.theme.UiScale;
-import java.awt.BorderLayout;
-import java.awt.Component;
-import java.awt.Cursor;
-import java.awt.Dimension;
-import java.awt.GridBagLayout;
-import java.awt.event.ActionEvent;
-import java.awt.event.KeyEvent;
+
 import javax.swing.AbstractAction;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -28,16 +25,30 @@ import javax.swing.JPanel;
 import javax.swing.KeyStroke;
 import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.GridBagLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
+import java.util.function.Consumer;
 
-/** Màn hình đăng nhập: nền gradient, card trắng 480, validate inline. */
+/** Màn hình đăng nhập: xác thực qua system.authentication. */
 public final class LoginScreen extends GradientPanel {
   private final FormField username = FormField.text("Tên đăng nhập", "Nhập tên đăng nhập", "user");
   private final FormField password = FormField.password("Mật khẩu", "Nhập mật khẩu", "lock");
   private final JLabel globalError = new JLabel();
-  private final Runnable onLogin;
+  private final SessionGateway gateway;
+  private final Consumer<users> onLogin;
+  private final Runnable onOpenRegister;
 
-  public LoginScreen(Runnable onLogin) {
-    this.onLogin = onLogin == null ? () -> {} : onLogin;
+  public LoginScreen(
+      SessionGateway gateway, Consumer<users> onLogin, Runnable onOpenRegister) {
+    this.gateway = gateway;
+    this.onLogin = onLogin == null ? user -> {} : onLogin;
+    this.onOpenRegister = onOpenRegister == null ? () -> {} : onOpenRegister;
     setLayout(new GridBagLayout());
     add(buildCard());
 
@@ -118,7 +129,7 @@ public final class LoginScreen extends GradientPanel {
     body.add(vgap(Space.LG));
     body.add(login);
     body.add(vgap(Space.MD));
-    body.add(hint());
+    body.add(registerRow());
 
     card.add(body, BorderLayout.CENTER);
     return card;
@@ -149,19 +160,42 @@ public final class LoginScreen extends GradientPanel {
     return row;
   }
 
+  private JPanel registerRow() {
+    JPanel row = new JPanel(new FlowLayout(FlowLayout.CENTER, Space.XS, 0));
+    row.setOpaque(false);
+    row.setAlignmentX(Component.LEFT_ALIGNMENT);
+    row.setMaximumSize(new Dimension(Integer.MAX_VALUE, UiScale.px(32)));
+
+    JLabel hint = new JLabel("Chưa có tài khoản?");
+    hint.setFont(Typography.small());
+    hint.setForeground(Palette.TEXT_MUTED_STRONG);
+
+    JButton register = new JButton("Đăng ký ngay");
+    register.setFont(Typography.meta());
+    register.setForeground(Palette.PRIMARY_DARK);
+    register.setContentAreaFilled(false);
+    register.setBorderPainted(false);
+    register.setFocusPainted(false);
+    register.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+    register.addActionListener(e -> this.onOpenRegister.run());
+
+    row.add(hint);
+    row.add(register);
+    return row;
+  }
+
   private static Component vgap(int height) {
     Component gap = Box.createVerticalStrut(height);
     ((JComponent) gap).setAlignmentX(Component.LEFT_ALIGNMENT);
     return gap;
   }
 
-  private JLabel hint() {
-    JLabel hint = new JLabel("Tài khoản demo: admin / 123456", SwingConstants.CENTER);
-    hint.setFont(Typography.small());
-    hint.setForeground(Palette.TEXT_MUTED_STRONG);
-    hint.setAlignmentX(Component.LEFT_ALIGNMENT);
-    hint.setMaximumSize(new Dimension(Integer.MAX_VALUE, hint.getPreferredSize().height));
-    return hint;
+  public void reset() {
+    username.setValue("");
+    password.setValue("");
+    username.clearError();
+    password.clearError();
+    globalError.setVisible(false);
   }
 
   private void submit() {
@@ -187,13 +221,22 @@ public final class LoginScreen extends GradientPanel {
       return;
     }
 
-    if ("admin".equals(username.getValue()) && "123456".equals(password.getValue())) {
-      onLogin.run();
-    } else {
-      globalError.setText("Tên đăng nhập hoặc mật khẩu không đúng.");
+    try {
+      users user = gateway.authenticate(username.getValue(), password.getValue());
+      if (user == null) {
+        globalError.setText("Tên đăng nhập hoặc mật khẩu không đúng.");
+        globalError.setVisible(true);
+        password.setError("Kiểm tra lại thông tin đăng nhập.");
+        password.focusInput();
+        revalidate();
+        repaint();
+        return;
+      }
+      reset();
+      onLogin.accept(user);
+    } catch (DataAccessException ex) {
+      globalError.setText(ex.getMessage());
       globalError.setVisible(true);
-      password.setError("Kiểm tra lại thông tin đăng nhập.");
-      password.focusInput();
       revalidate();
       repaint();
     }

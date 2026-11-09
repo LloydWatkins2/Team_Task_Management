@@ -1,17 +1,20 @@
 package com.java.teamtask.ui;
 
+import com.java.teamtask.elements.projectsAssignments;
+import com.java.teamtask.elements.users;
 import com.java.teamtask.ui.components.AppButton;
 import com.java.teamtask.ui.components.EmptyState;
 import com.java.teamtask.ui.components.PageHeader;
 import com.java.teamtask.ui.components.Sidebar;
 import com.java.teamtask.ui.components.TopBar;
-import com.java.teamtask.ui.sample.SampleData;
-import com.java.teamtask.ui.sample.TaskItem;
+import com.java.teamtask.ui.data.SessionGateway;
+import com.java.teamtask.ui.data.UiMapper;
+import com.java.teamtask.ui.data.UserSession;
 import com.java.teamtask.ui.screens.DashboardScreen;
 import com.java.teamtask.ui.screens.LoginScreen;
-import com.java.teamtask.ui.screens.ProjectsScreen;
-import com.java.teamtask.ui.screens.TaskDetailDialog;
-import com.java.teamtask.ui.screens.TaskFormScreen;
+import com.java.teamtask.ui.screens.ProfileScreen;
+import com.java.teamtask.ui.screens.ProjectDetailScreen;
+import com.java.teamtask.ui.screens.RegisterScreen;
 import com.java.teamtask.ui.theme.Layout;
 import com.java.teamtask.ui.theme.Painters;
 import com.java.teamtask.ui.theme.Palette;
@@ -39,36 +42,42 @@ import javax.swing.Scrollable;
 import javax.swing.SwingUtilities;
 import javax.swing.border.EmptyBorder;
 
-/** Cửa sổ chính: CardLayout login ↔ app shell, sidebar + topbar + nội dung. */
+/** Cửa sổ chính: login/register ↔ app shell, sidebar + topbar + nội dung DB-backed. */
 public final class MainFrame extends JFrame {
+  private final SessionGateway gateway;
+  private final UserSession session = new UserSession();
   private final CardLayout rootLayout = new CardLayout();
   private final JPanel root = new JPanel(rootLayout);
   private final CardLayout contentLayout = new CardLayout();
   private final ScrollableContent content = new ScrollableContent(contentLayout);
-  private final List<TaskItem> tasks = new ArrayList<>(SampleData.tasks());
 
+  private LoginScreen login;
+  private RegisterScreen register;
   private Sidebar sidebar;
   private TopBar topBar;
   private MainSurface mainSurface;
   private JScrollPane scroll;
   private DashboardScreen dashboard;
-  private ProjectsScreen projects;
-  private TaskFormScreen taskForm;
+  private ProjectDetailScreen detail;
+  private ProfileScreen profile;
   private JPanel placeholderScreen;
   private PageHeader placeholderHeader;
   private int lastWidth = -1;
   private boolean appBuilt;
 
-  public MainFrame() {
+  public MainFrame(SessionGateway gateway) {
     super("Team Task Managements");
+    this.gateway = gateway;
     setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     setSize(1360, 900);
     setMinimumSize(new Dimension(Layout.BP_MD, 700));
     setLocationRelativeTo(null);
     setContentPane(root);
 
-    LoginScreen login = new LoginScreen(this::showApp);
+    login = new LoginScreen(gateway, this::signIn, this::showRegister);
+    register = new RegisterScreen(gateway, this::signIn, this::showLogin);
     root.add(login, "login");
+    root.add(register, "register");
 
     buildApp();
     rootLayout.show(root, "login");
@@ -83,23 +92,18 @@ public final class MainFrame extends JFrame {
   }
 
   private void buildApp() {
-    sidebar = new Sidebar(SampleData.CURRENT_USER, this::navigate);
-    topBar = new TopBar(SampleData.CURRENT_USER);
+    sidebar = new Sidebar("", this::navigate);
+    topBar = new TopBar("");
 
     dashboard =
-        new DashboardScreen(
-            tasks,
-            this::showForm,
-            () -> navigate("projects"),
-            task ->
-                new TaskDetailDialog(this, task, SampleData.comments(), SampleData.CURRENT_USER)
-                    .setVisible(true));
-    projects = new ProjectsScreen(() -> navigate("dashboard"));
-    taskForm = new TaskFormScreen(() -> navigate("dashboard"), this::saveTask);
+        new DashboardScreen(gateway, session, this::openProject, this::syncProjects);
+    detail =
+        new ProjectDetailScreen(gateway, session, () -> navigate("dashboard"), this::syncProjects);
+    profile = new ProfileScreen(gateway, session, () -> navigate("dashboard"));
 
     content.add(dashboard, "dashboard");
-    content.add(projects, "projects");
-    content.add(taskForm, "form");
+    content.add(detail, "detail");
+    content.add(profile, "profile");
     content.add(placeholder(), "placeholder");
     scroll = new JScrollPane(content);
     scroll.setBorder(null);
@@ -148,6 +152,14 @@ public final class MainFrame extends JFrame {
     return panel;
   }
 
+  /** Đăng nhập/đăng ký thành công: lưu user đầy đủ từ DB và mở Dashboard. */
+  public void signIn(users user) {
+    session.setUser(user);
+    syncProjects();
+    dashboard.refresh();
+    showApp();
+  }
+
   void showApp() {
     rootLayout.show(root, "app");
     sidebar.select("dashboard");
@@ -157,25 +169,42 @@ public final class MainFrame extends JFrame {
     applyResponsive(getContentPane().getWidth());
   }
 
+  private void showRegister() {
+    register.reset();
+    rootLayout.show(root, "register");
+  }
+
+  private void showLogin() {
+    login.reset();
+    rootLayout.show(root, "login");
+  }
+
   private void navigate(String key) {
     if ("logout".equals(key)) {
-      rootLayout.show(root, "login");
+      logout();
       return;
     }
-    if ("dashboard".equals(key) || "tasks".equals(key)) {
+    if (key != null && key.startsWith("project:")) {
+      openProjectById(key.substring("project:".length()));
+      return;
+    }
+    if ("dashboard".equals(key) || "tasks".equals(key) || "projects".equals(key)) {
+      leaveProject();
       contentLayout.show(content, "dashboard");
       content.setCurrentScreen(dashboard);
-      sidebar.select(key);
-    } else if ("projects".equals(key) || key.startsWith("project:")) {
-      contentLayout.show(content, "projects");
-      content.setCurrentScreen(projects);
-      sidebar.select(key);
+      sidebar.select("tasks".equals(key) ? "tasks" : "dashboard");
+    } else if ("settings".equals(key)) {
+      leaveProject();
+      profile.onShown();
+      contentLayout.show(content, "profile");
+      content.setCurrentScreen(profile);
+      sidebar.select("settings");
     } else {
+      leaveProject();
       String title =
           switch (key) {
             case "calendar" -> "Lịch";
             case "team" -> "Thành viên";
-            case "settings" -> "Cài đặt";
             default -> "Tính năng";
           };
       placeholderHeader.setTitle(title);
@@ -189,19 +218,79 @@ public final class MainFrame extends JFrame {
     content.repaint();
   }
 
-  private void showForm() {
-    taskForm.reset();
-    contentLayout.show(content, "form");
-    content.setCurrentScreen(taskForm);
+  private void openProject(projectsAssignments assignment) {
+    if (assignment == null || assignment.getProject() == null) {
+      navigate("dashboard");
+      return;
+    }
+    detail.open(assignment);
+    contentLayout.show(content, "detail");
+    content.setCurrentScreen(detail);
+    sidebar.select("project:" + assignment.getProject().getId());
     scrollToTop();
     content.revalidate();
     content.repaint();
   }
 
-  private void saveTask(TaskItem task) {
-    tasks.add(task);
-    dashboard.setTasks(tasks);
-    navigate("dashboard");
+  private void openProjectById(String idText) {
+    int projectId;
+    try {
+      projectId = Integer.parseInt(idText);
+    } catch (NumberFormatException ex) {
+      navigate("dashboard");
+      return;
+    }
+    projectsAssignments found = findProject(projectId);
+    if (found == null && session.isAuthenticated()) {
+      dashboard.refresh();
+      found = findProject(projectId);
+    }
+    if (found == null) {
+      navigate("dashboard");
+      return;
+    }
+    openProject(found);
+  }
+
+  private projectsAssignments findProject(int projectId) {
+    if (!session.isAuthenticated()) {
+      return null;
+    }
+    for (projectsAssignments assignment : session.getUser().getRelatedProjects().values()) {
+      if (assignment.getProject() != null && assignment.getProject().getId() == projectId) {
+        return assignment;
+      }
+    }
+    return null;
+  }
+
+  private void leaveProject() {
+    if (session.hasActiveProject()) {
+      session.clearActiveProject();
+    }
+  }
+
+  private void logout() {
+    session.logout();
+    sidebar.setProjects(List.of());
+    sidebar.setUserName("");
+    topBar.setUserName("");
+    showLogin();
+  }
+
+  /** Đồng bộ danh sách dự án và tên người dùng trên sidebar/topbar từ session hiện tại. */
+  private void syncProjects() {
+    if (!session.isAuthenticated()) {
+      sidebar.setProjects(List.of());
+      sidebar.setUserName("");
+      topBar.setUserName("");
+      return;
+    }
+    users user = session.getUser();
+    String name = UiMapper.displayName(user);
+    sidebar.setUserName(name);
+    topBar.setUserName(name);
+    sidebar.setProjects(new ArrayList<>(user.getRelatedProjects().values()));
   }
 
   private void scrollToTop() {
@@ -219,15 +308,9 @@ public final class MainFrame extends JFrame {
     sidebar.setCompact(compact);
     topBar.setCompact(compact);
     dashboard.setCompact(Layout.isStacked(width));
-    projects.setCompact(width < Layout.BP_MD);
-    taskForm.setCompact(Layout.isStacked(width));
+    detail.setCompact(Layout.isStacked(width));
 
-    java.awt.Insets page = Layout.pagePadding(width);
     java.awt.Insets main = Layout.mainPadding(width);
-    int shellWidth = Math.min(width - page.left - page.right, Layout.SHELL_MAX_WIDTH);
-    int sidebarWidth = compact ? Layout.SIDEBAR_WIDTH_COMPACT : Layout.SIDEBAR_WIDTH;
-    int available = shellWidth - sidebarWidth - main.left - main.right - 14;
-    taskForm.setMaxWidth(available);
 
     mainSurface.setBorder(new EmptyBorder(main));
     mainSurface.revalidate();

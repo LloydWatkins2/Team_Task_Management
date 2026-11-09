@@ -1,76 +1,13 @@
 package com.java.teamtask.elements;
 
-import java.sql.*;
-import java.util.Scanner;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
-/**
- * @author DELL
- */
+/** Các thao tác hệ thống: đăng ký, đăng nhập và phân quyền. */
 public class system {
-  public static void startApp(Connection conn) {
-    Scanner sc = new Scanner(System.in);
-    while (true) {
-      System.out.println("1. Đăng ký tài khoản");
-      System.out.println("2. Đăng nhập");
-      System.out.println("0. Thoát");
-      System.out.print("Chọn chức năng: ");
-      int choice = sc.nextInt();
-      sc.nextLine();
-      switch (choice) {
-        case 1:
-          System.out.println("Đăng ký tài khoản");
-          System.out.println("Họ: ");
-          String lname = sc.nextLine();
-
-          System.out.print("Tên: ");
-          String fname = sc.nextLine();
-
-          System.out.print("Username: ");
-          String username = sc.nextLine();
-
-          System.out.print("Mật khẩu: ");
-          String password = sc.nextLine();
-
-          System.out.print("Gmail: ");
-          String gmail = sc.nextLine();
-
-          System.out.print("Số điện thoại: ");
-          String phone = sc.nextLine();
-
-          System.out.print("Ngày sinh (dob): ");
-          String dob = sc.nextLine();
-
-          register(lname, fname, username, password, gmail, phone, dob, conn);
-          break;
-        case 2:
-          System.out.println("Đăng nhập tài khoản");
-          System.out.println("Username hoặc gmail: ");
-          String UN = sc.nextLine();
-          System.out.println("Mật khẩu: ");
-          String MK = sc.nextLine();
-
-          if (authentication(UN, MK, conn)) {
-            int chon;
-            System.out.println("chon 5 de xem subject");
-            System.out.println("chon 6 de thoat");
-            while ((chon = sc.nextInt()) != 6) {
-              System.out.println("chon 5 de xem subject");
-              System.out.println("chon 6 de thoat");
-            }
-          }
-          break;
-        case 0:
-          System.out.println("Đã thoát chương trình");
-          break;
-        default:
-          System.out.println("Lựa chọn không hợp lệ, vui lòng chọn lại");
-      }
-      if (choice == 0) {
-        break;
-      }
-      sc.close();
-    }
-  }
+  private system() {}
 
   public static boolean register(
       String lname,
@@ -80,79 +17,77 @@ public class system {
       String gmail,
       String phone,
       String dob,
-      Connection conn) {
-    String checkSql = "SELECT COUNT(*) FROM users WHERE username = ? OR gmail = ?";
+      Connection conn)
+      throws SQLException {
+    if (conn == null) {
+      return false;
+    }
+    String checkSql = "SELECT 1 FROM users WHERE username = ? OR gmail = ? LIMIT 1";
     String insertSql =
-        "INSERT INTO users(lname, fname, username, password, gmail, phone, dob) VALUES(?, ?, ?, ?,"
-            + " ?, ?, ?)";
-    try (conn) {
-      try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
-        checkStmt.setString(1, username);
-        checkStmt.setString(2, gmail);
-        ResultSet rs = checkStmt.executeQuery();
-        if (rs.next() && rs.getInt(1) > 0) {
+        "INSERT INTO users(lname, fname, username, password, gmail, phone, dob) "
+            + "VALUES(?, ?, ?, ?, ?, ?, ?)";
+    try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
+      checkStmt.setString(1, username);
+      checkStmt.setString(2, gmail);
+      try (ResultSet rs = checkStmt.executeQuery()) {
+        if (rs.next()) {
           System.out.println("Username hoặc Gmail đã tồn tại");
           return false;
         }
       }
-      try (PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
-        insertStmt.setString(1, lname);
-        insertStmt.setString(2, fname);
-        insertStmt.setString(3, username);
-        insertStmt.setString(4, password);
-        insertStmt.setString(5, gmail);
-        insertStmt.setString(6, phone);
-        insertStmt.setString(7, dob);
-
-        int insert = insertStmt.executeUpdate();
-        if (insert > 0) {
-          System.out.println("Tạo tài khoản thành công");
-          return true;
-        }
-      }
-    } catch (SQLException e) {
-      System.out.println("Lỗi SQL: " + e.getMessage());
     }
-    return false;
+    try (PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
+      insertStmt.setString(1, lname);
+      insertStmt.setString(2, fname);
+      insertStmt.setString(3, username);
+      insertStmt.setString(4, password);
+      insertStmt.setString(5, gmail);
+      insertStmt.setString(6, phone);
+      java.sql.Date sqlDob = Dates.toSqlDate(dob);
+      if (sqlDob == null) {
+        throw new IllegalArgumentException("Ngày sinh không hợp lệ (dd/MM/yyyy).");
+      }
+      insertStmt.setDate(7, sqlDob);
+      return insertStmt.executeUpdate() > 0;
+    }
   }
 
   public static boolean authentication(String username, String password, Connection conn) {
+    if (conn == null || username == null || password == null) {
+      return false;
+    }
     String loginSql =
-        "SELECT * FROM users WHERE ((username = ? AND password = ?) OR (gmail = ? AND password ="
-            + " ?))";
-
-    try (conn) {
-      try (PreparedStatement stmt = conn.prepareStatement(loginSql)) {
-
-        stmt.setString(1, username);
-        stmt.setString(2, password);
-
-        stmt.setString(3, username);
-        stmt.setString(4, password);
-
-        ResultSet rs = stmt.executeQuery();
-        if (rs.next()) {
-          String fullName = rs.getString("lname") + " " + rs.getString("fname");
-          System.out.println("Đăng nhập thành công! Chào mừng " + fullName);
-          return true;
-        } else {
-          System.out.println("Thất bại: Sai username hoặc mật khẩu!");
-          return false;
-        }
+        "SELECT 1 FROM users "
+            + "WHERE (username = ? AND password = ?) OR (gmail = ? AND password = ?) "
+            + "LIMIT 1";
+    try (PreparedStatement stmt = conn.prepareStatement(loginSql)) {
+      stmt.setString(1, username);
+      stmt.setString(2, password);
+      stmt.setString(3, username);
+      stmt.setString(4, password);
+      try (ResultSet rs = stmt.executeQuery()) {
+        return rs.next();
       }
     } catch (SQLException e) {
-      System.out.println("Lỗi SQL: " + e.getMessage());
+      System.out.println("Lỗi SQL khi đăng nhập: " + e.getMessage());
+      return false;
     }
-    return false;
   }
 
-  public static seeProjects roleChecker(projectsAssignments projas, users User, projects Project) {
-    String role = projas.role;
-    if (role == "owner") {
-      return new owners(User, Project, projas);
+  /**
+   * Trả về đối tượng quyền tương ứng với role trong project.
+   *
+   * <p>Owner dùng được toàn bộ hành động quản lý, member chỉ xem và bình luận.
+   */
+  public static seeProjects roleChecker(
+      projectsAssignments projas, users user, projects project) {
+    if (user == null || project == null) {
+      throw new IllegalArgumentException("user và project không được null");
     }
-    return new members(User, Project);
+    String role = projas == null ? null : projas.getRole();
+    if ("owner".equalsIgnoreCase(role)) {
+      return new owners(user, project, projas);
+    }
+    return new members(user, project);
   }
-  // bảo opencode làm phần này
-  // public void action(users currentuser, projects project) {}
 }
