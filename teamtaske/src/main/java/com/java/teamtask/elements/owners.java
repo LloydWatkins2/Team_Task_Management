@@ -105,10 +105,28 @@ public class owners implements projectsManage {
   public Double viewMemberProgress(members Member) {}
 
   @Override
-  public ArrayList<tasks> viewTask() {
+  public ArrayList<tasks> viewTasks() {
     return this.project.tasksList;
-  } // xem thông tin chi tiết task
+  }
+
+  public tasks viewTasksInfo(tasks tk) {
+    return tk;
+  }
 
   @Override
-  public String commentTask(tasks Tasks, String comment) {}
+  public void commentTask(Connection conn, tasks Tasks, String comment) {
+    String sql = "INSERT INTO Comments VALUES(?,?,?);";
+    try (conn;
+        PreparedStatement ins = conn.prepareStatement(sql)) {
+      ins.setInt(1, Tasks.taskid);
+      ins.setInt(2, this.user.userId);
+      ins.setString(3, comment);
+      ins.executeUpdate();
+      Tasks.commentsList.put(this.user, comment);
+      System.out.println("Da gui comment");
+
+    } catch (Exception e) {
+      System.out.println("Khong the comments, xin thu lai " + e);
+    }
+  }
 }
