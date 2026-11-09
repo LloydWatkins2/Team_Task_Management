@@ -3,6 +3,8 @@ package com.java.teamtask.elements;
 import java.util.*;
 import java.sql.Connection;
 import com.java.teamtask.connections.SQL;
+import java.sql.PreparedStatement;
+import java.util.ArrayList;
 
 public class members implements seeProjects {
   private users user;
@@ -32,24 +34,31 @@ public class members implements seeProjects {
   }
 
   @Override
-  public Double viewMemberProgress(
-    Connection conn,
-    members k
-  ) {}
+  public Double viewMemberProgress(Connection conn, members k) {}
 
   @Override
-  public String viewTask(Connection conn) {} // xem thông tin chi tiết của task
+  public ArrayList<tasks> viewTasks() {
+    return this.project.tasksList;
+  } // xem thông tin chi tiết của task
+
+  public tasks viewTasksInfo(tasks tk) {
+    return tk;
+  }
 
   @Override
-  public String commentTask(
-    Connection conn,
-    tasks tk,
-    String cmt
-  ) {}
+  public void commentTask(Connection conn, tasks Tasks, String comment) {
+    String sql = "INSERT INTO Comments VALUES(?,?,?);";
+    try (conn;
+        PreparedStatement ins = conn.prepareStatement(sql)) {
+      ins.setInt(1, Tasks.taskid);
+      ins.setInt(2, this.user.userId);
+      ins.setString(3, comment);
+      ins.executeUpdate();
+      Tasks.commentsList.put(this.user, comment);
+      System.out.println("Da gui comment");
 
-  @Override 
-  public String viewMemberInfo(
-    Connection conn,
-    members k
-  ) {}
+    } catch (Exception e) {
+      System.out.println("Khong the comments, xin thu lai " + e);
+    }
+  }
 }
