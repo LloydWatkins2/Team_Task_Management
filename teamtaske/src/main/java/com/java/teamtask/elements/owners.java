@@ -1,10 +1,10 @@
 package com.java.teamtask.elements;
 
 import com.java.teamtask.connections.SQL;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.time.LocalDateTime;
+import java.util.*;
 
 public class owners implements projectsManage {
   private users user;
@@ -66,9 +66,8 @@ public class owners implements projectsManage {
   @Override
   public String deleteProject(Connection conn, int pid) {
     String delProj = "DELETE FROM Projects WHERE Project_id = ?";
-    String delTask = "DELETE FROM Tasks WHERE Project_id = ?";
     try (conn;
-    PreparedStatement del_p = conn.prepareStatement(delProj)) {
+        PreparedStatement del_p = conn.prepareStatement(delProj)) {
       del_p.setLong(1, pid);
       del_p.executeUpdate();
 
