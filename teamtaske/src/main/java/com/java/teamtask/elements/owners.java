@@ -4,7 +4,7 @@ import com.java.teamtask.connections.SQL;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.util.*;
+import java.time.LocalDateTime;
 
 public class owners implements projectsManage {
   private users user;
@@ -22,20 +22,42 @@ public class owners implements projectsManage {
   public void addMember(users User) {}
 
   @Override
-  public void assignTask(users Member, ArrayList<tasks> Tasks, Connection conn) {
-    for (tasks e : Tasks) {
-      e.assginee = Member;
-      this.project.tasksList.add(e);
+  public void assignTask(ArrayList<tasks> taske, Connection conn) {
+    String sql = "UPDATE Tasks SET user_id = ? where task_id = ?";
+    try (conn;
+        PreparedStatement upt = conn.prepareStatement(sql)) {
+      for (tasks e : taske) {
+        e.assginee = this.user;
+        this.project.tasksList.add(e);
+        upt.setInt(1, this.user.userId);
+        upt.setInt(2, e.taskid);
+        upt.executeUpdate();
+      }
+      System.out.println(" Update task thành công");
+    } catch (Exception e) {
+      System.out.println("loi giao viec " + e);
     }
   }
 
   @Override
   public void updateTask(
-      tasks Tasks, String taskName, String taskStatus, String taskDescription, String taskDL) {
-
-    ArrayList<String> changingData =
-        Tasks.updatetask(taskName, taskStatus, taskDescription, taskDL);
-    SQL.taskUpdate(changingData);
+      tasks Tasks,
+      String taskName,
+      String taskStatus,
+      String taskDescription,
+      LocalDateTime taskDL,
+      Connection conn) {
+    tasks newTasks =
+        new tasks(
+            0,
+            taskName,
+            taskDescription,
+            taskStatus,
+            LocalDateTime.now(),
+            LocalDateTime.now(),
+            taskDL,
+            this.user);
+    Tasks.updatetask(conn, newTasks);
   }
 
   @Override
@@ -84,7 +106,9 @@ public class owners implements projectsManage {
   public Double viewMemberProgress(members Member) {}
 
   @Override
-  public String viewTask() {} // xem thông tin chi tiết task
+  public ArrayList<tasks> viewTask() {
+    return this.project.tasksList;
+  } // xem thông tin chi tiết task
 
   @Override
   public String commentTask(tasks Tasks, String comment) {}

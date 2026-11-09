@@ -72,8 +72,8 @@ public class SQL {
                 + "taskLastUpdatedAt TIMESTAMP NOT NULL,\n"
                 + "user_id INT NOT NULL,\n"
                 + "Project_id INT NOT NULL,\n"
-                + "FOREIGN KEY (user_id) REFERENCES users(id),\n"
                 + "FOREIGN KEY (Project_id) REFERENCES Projects(Project_id) ON DELETE CASCADE\n"
+                + "FOREIGN KEY (Project_id) REFERENCES Projects(Project_id)\n"
                 + ");");
 
         tabs.add(
