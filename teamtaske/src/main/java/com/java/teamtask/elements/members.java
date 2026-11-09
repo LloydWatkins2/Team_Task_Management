@@ -1,6 +1,8 @@
 package com.java.teamtask.elements;
 
+import java.util.*;
 import java.sql.Connection;
+import com.java.teamtask.connections.SQL;
 
 public class members implements seeProjects {
   private users user;
@@ -12,7 +14,19 @@ public class members implements seeProjects {
   }
 
   @Override
-  public String viewProjectInfo(Connection conn) {}
+  public projects viewProjectInfo(Connection conn, int pid) {
+    ArrayList<projects> Projects = new ArrayList<>();
+    for (projects p : SQL.selectRelatedProject(conn, user).keySet()) {
+      Projects.add(p);
+    }
+
+    for (projects p : Projects) {
+      if (p.id == pid) {
+        return p;
+      }
+    }
+    return null;
+  }
 
   @Override
   public String viewMembers(Connection conn) {}
