@@ -1,6 +1,9 @@
 package com.java.teamtask.elements;
 
 import com.java.teamtask.connections.SQL;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.util.*;
 
 public class owners implements projectsManage {
@@ -36,10 +39,27 @@ public class owners implements projectsManage {
   }
 
   @Override
-  public void updateProject() {}
+  public void updateProject(Connection conn, int id) {}
 
   @Override
-  public void deleteProject() {}
+  public String deleteProject(Connection conn, int pid) {
+    String delProj = "DELETE FROM Projects WHERE Project_id = ?";
+    String delTask = "DELETE FROM Tasks WHERE Project_id = ?";
+    try (conn;
+    PreparedStatement del_p = conn.prepareStatement(delProj)) {
+      del_p.setLong(1, pid);
+      del_p.executeUpdate();
+
+      ArrayList<projects> Projects = new ArrayList<>();
+      for (projects p : SQL.selectRelatedProject(conn, user).keySet()) {
+        Projects.add(p);
+      }
+      Projects.removeIf(p -> p.id == pid);
+      return "Đã xóa project";
+    } catch (Exception e) {
+      return "Lỗi xóa project";
+    }
+  }
 
   @Override
   public String viewProjectInfo() {}

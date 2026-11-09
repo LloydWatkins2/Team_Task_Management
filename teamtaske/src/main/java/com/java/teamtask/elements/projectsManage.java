@@ -1,6 +1,6 @@
 package com.java.teamtask.elements;
 
-import com.sun.jdi.connect.spi.Connection;
+import java.sql.Connection;
 import java.util.ArrayList;
 
 /** projectsManage */
@@ -21,5 +21,5 @@ public interface projectsManage extends seeProjects {
 
   public abstract void updateProject(Connection conn);
 
-  public abstract void deleteProject(Connection conn);
+  public abstract String deleteProject(Connection conn, int pid);
 }
