@@ -20,7 +20,10 @@ public interface projectsManage extends seeProjects {
       LocalDateTime taskDL,
       Connection conn);
 
-  public abstract void updateProject(Connection conn);
+  public abstract String updateProject(
+    Connection conn,
+    String name, String des, LocalDateTime dl
+  );
 
-  public abstract String deleteProject(Connection conn, int pid);
+  public abstract void deleteProject(Connection conn);
 }

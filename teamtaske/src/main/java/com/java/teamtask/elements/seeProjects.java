@@ -5,7 +5,7 @@ import java.util.ArrayList;
 
 /** projectsManage */
 public interface seeProjects {
-  public abstract String viewProjectInfo(Connection conn); // xem thông tin chi tiết 1 project
+  public abstract projects viewProjectInfo(); // xem thông tin chi tiết 1 project
 
   public abstract String viewMembers(Connection conn); // xem danh sách thành viên
 

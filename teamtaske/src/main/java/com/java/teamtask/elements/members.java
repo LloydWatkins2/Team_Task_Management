@@ -1,6 +1,8 @@
 package com.java.teamtask.elements;
 
+import java.util.*;
 import java.sql.Connection;
+import com.java.teamtask.connections.SQL;
 import java.sql.PreparedStatement;
 import java.util.ArrayList;
 
@@ -14,7 +16,9 @@ public class members implements seeProjects {
   }
 
   @Override
-  public String viewProjectInfo(Connection conn) {}
+  public projects viewProjectInfo() {
+    return this.project;
+  }
 
   @Override
   public String viewMembers(Connection conn) {}
@@ -24,7 +28,7 @@ public class members implements seeProjects {
     int goal = this.project.tasksList.size();
     int cnt = 0;
     for (tasks t : this.project.tasksList) {
-      if (t.taskStatus == "Hoàn thành") cnt += 1;
+      if (t.taskStatus.equals("Hoàn thành")) cnt += 1;
     }
     return (double) (cnt / goal);
   }

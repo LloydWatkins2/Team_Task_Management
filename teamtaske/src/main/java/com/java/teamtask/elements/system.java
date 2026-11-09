@@ -149,7 +149,7 @@ public class system {
   public static seeProjects roleChecker(projectsAssignments projas, users User, projects Project) {
     String role = projas.role;
     if (role == "owner") {
-      return new owners(User, Project);
+      return new owners(User, Project, projas);
     }
     return new members(User, Project);
   }
