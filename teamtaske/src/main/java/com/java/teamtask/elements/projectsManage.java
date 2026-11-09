@@ -1,10 +1,7 @@
 package com.java.teamtask.elements;
 
 import java.sql.Connection;
-<<<<<<< HEAD
-=======
 import java.time.LocalDateTime;
->>>>>>> 0fa24d37a0866998c3420842af6047baf1dfaa84
 import java.util.ArrayList;
 
 /** projectsManage */
