@@ -14,18 +14,8 @@ public class members implements seeProjects {
   }
 
   @Override
-  public projects viewProjectInfo(Connection conn, int pid) {
-    ArrayList<projects> Projects = new ArrayList<>();
-    for (projects p : SQL.selectRelatedProject(conn, user).keySet()) {
-      Projects.add(p);
-    }
-
-    for (projects p : Projects) {
-      if (p.id == pid) {
-        return p;
-      }
-    }
-    return null;
+  public projects viewProjectInfo() {
+    return this.project;
   }
 
   @Override
@@ -36,7 +26,7 @@ public class members implements seeProjects {
     int goal = this.project.tasksList.size();
     int cnt = 0;
     for (tasks t : this.project.tasksList) {
-      if (t.taskStatus == "Hoàn thành") cnt += 1;
+      if (t.taskStatus.equals("Hoàn thành")) cnt += 1;
     }
     return (double) (cnt / goal);
   }

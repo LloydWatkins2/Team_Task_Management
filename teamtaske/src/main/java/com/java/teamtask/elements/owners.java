@@ -11,10 +11,12 @@ import java.util.*;
 public class owners implements projectsManage {
   private users user;
   private projects project;
+  private projectsAssignments pa;
 
-  public owners(users Users, projects Projects) {
+  public owners(users Users, projects Projects, projectsAssignments pa) {
     this.user = Users;
     this.project = Projects;
+    this.pa = pa;
   }
 
   @Override
@@ -64,11 +66,11 @@ public class owners implements projectsManage {
 
   @Override
   public String updateProject(
-    Connection conn, int id,
+    Connection conn,
     String name, String des, LocalDateTime dl
   ) {
 
-    String upProj = "UPDATE Projects SET Name = ?, Description = ?, Deadline = ?, Update_at = ?";
+    String upProj = "UPDATE Projects SET Name = ?, Description = ?, Deadline = ?, Update_at = ? WHERE Project_id = ?";
     LocalDateTime now = LocalDateTime.now();
 
     try (conn;
@@ -77,11 +79,15 @@ public class owners implements projectsManage {
       stmt.setString(2, des);
       stmt.setTimestamp(3, Timestamp.valueOf(dl));
       stmt.setTimestamp(4, Timestamp.valueOf(now)); // Update_at
+      stmt.setInt(5, this.project.id);
       
       this.project.name = name;
       this.project.description = des;
       this.project.deadline = dl;
       this.project.lastUpdatedAt = now;
+
+      this.pa.project = project;
+      this.user.relatedProjects.put(this.project, pa);
       
       return "Cập nhật thành công";
 
@@ -91,41 +97,27 @@ public class owners implements projectsManage {
   }
 
   @Override
-  public String deleteProject(Connection conn, int pid) {
+  public void deleteProject(Connection conn) {
 
     String delProj = "DELETE FROM Projects WHERE Project_id = ?";
 
     try (conn;
         PreparedStatement stmt = conn.prepareStatement(delProj)) {
-      stmt.setLong(1, pid);
+      stmt.setInt(1, this.project.id);
       stmt.executeUpdate();
 
-      ArrayList<projects> Projects = new ArrayList<>();
-      for (projects p : SQL.selectRelatedProject(conn, user).keySet()) {
-        Projects.add(p);
-      }
-      Projects.removeIf(p -> p.id == pid);
+      this.user.relatedProjects.remove(this.project);
 
-      return "Đã xóa project";
+      System.out.println("Đã xóa project");
 
     } catch (Exception e) {
-      return "Lỗi xóa project";
+      System.out.println("Lỗi xóa project" + e);
     }
-  }
+  } // Sau khi xóa project, instance owner phải bị xóa role, trả về user và trở về dashboard
 
   @Override
-  public projects viewProjectInfo(Connection conn, int pid) {
-    ArrayList<projects> Projects = new ArrayList<>();
-    for (projects p : SQL.selectRelatedProject(conn, user).keySet()) {
-      Projects.add(p);
-    }
-
-    for (projects p : Projects) {
-      if (p.id == pid) {
-        return p;
-      }
-    }
-    return null;
+  public projects viewProjectInfo() {
+    return this.project;
   }
 
   @Override
@@ -139,7 +131,7 @@ public class owners implements projectsManage {
     int goal = this.project.tasksList.size();
     int cnt = 0;
     for (tasks t : this.project.tasksList) {
-      if (t.taskStatus == "Hoàn thành") cnt += 1;
+      if (t.taskStatus.equals("Hoàn thành")) cnt += 1;
     }
     return (double) (cnt / goal);
   }
