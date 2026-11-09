@@ -19,7 +19,7 @@ public class owners implements projectsManage {
   public void addMember(users User) {}
 
   @Override
-  public void assignTask(users Member, ArrayList<tasks> Tasks) {
+  public void assignTask(users Member, ArrayList<tasks> Tasks, Connection conn) {
     for (tasks e : Tasks) {
       e.assginee = Member;
       this.project.tasksList.add(e);
