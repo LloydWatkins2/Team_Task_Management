@@ -10,6 +10,7 @@ import com.java.teamtask.ui.GradientPanel;
 import com.java.teamtask.ui.components.AppButton;
 import com.java.teamtask.ui.components.Badge;
 import com.java.teamtask.ui.components.CircleIconPanel;
+import com.java.teamtask.ui.data.CommentView;
 import com.java.teamtask.ui.data.DataAccessException;
 import com.java.teamtask.ui.data.SessionGateway;
 import com.java.teamtask.ui.data.TaskView;
@@ -28,6 +29,8 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.KeyStroke;
+import javax.swing.SwingWorker;
+import javax.swing.Timer;
 import javax.swing.border.EmptyBorder;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -37,10 +40,13 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Window;
 import java.awt.event.KeyEvent;
+import java.util.ArrayList;
+import java.util.List;
 
 /** Hộp thoại chi tiết công việc: bình luận DB, đổi trạng thái theo quyền. */
 public final class TaskDetailDialog extends JDialog {
   private static final String[] STATUS_LABELS = {"Cần làm", "Đang làm", "Hoàn thành", "Quá hạn"};
+  private static final int COMMENT_POLL_MS = 1_000;
 
   private final SessionGateway gateway;
   private final seeProjects role;
@@ -49,7 +55,11 @@ public final class TaskDetailDialog extends JDialog {
   private final projects project;
   private final Runnable onChanged;
   private CommentsPanel commentsPanel;
+  private final Timer commentPollTimer;
   private final JPanel statusHolder = new JPanel(new FlowLayout(FlowLayout.LEFT, Space.SM, 0));
+  private int lastCommentId;
+  private boolean commentPollInFlight;
+  private boolean disposed;
 
   public TaskDetailDialog(
       Window owner,
@@ -78,27 +88,16 @@ public final class TaskDetailDialog extends JDialog {
     root.add(card, BorderLayout.CENTER);
 
     card.add(headerSection(), BorderLayout.NORTH);
-    CommentsPanel panel =
-        new CommentsPanel(
-            gateway.loadComments(task),
-            text -> {
-              try {
-                if (gateway.addComment(role, task, text)) {
-                  commentsPanel.setComments(gateway.loadComments(task));
-                  onChanged.run();
-                }
-              } catch (DataAccessException ex) {
-                showError(ex.getMessage());
-              }
-            },
-            () -> {
-              try {
-                commentsPanel.setComments(gateway.loadComments(task));
-              } catch (DataAccessException ex) {
-                showError(ex.getMessage());
-              }
-            });
-    commentsPanel = panel;
+    ArrayList<CommentView> initialComments;
+    try {
+      initialComments = gateway.loadComments(task);
+    } catch (DataAccessException ex) {
+      initialComments = new ArrayList<>();
+    }
+    lastCommentId = maxCommentId(initialComments);
+    commentsPanel = new CommentsPanel(initialComments, this::sendComment);
+    commentPollTimer = new Timer(COMMENT_POLL_MS, e -> pollComments());
+    commentPollTimer.setCoalesce(true);
     card.add(indented(commentsPanel), BorderLayout.CENTER);
     card.add(padded(actions()), BorderLayout.SOUTH);
 
@@ -309,6 +308,87 @@ public final class TaskDetailDialog extends JDialog {
     row.add(left, BorderLayout.WEST);
     row.add(right, BorderLayout.EAST);
     return row;
+  }
+
+  private boolean sendComment(String text) {
+    try {
+      if (gateway.addComment(role, task, text)) {
+        pollComments();
+        onChanged.run();
+        return true;
+      }
+    } catch (DataAccessException ex) {
+      showError(ex.getMessage());
+    }
+    return false;
+  }
+
+  /** Gọi một vòng poll ngay; package-private để test không phải chờ timer. */
+  void pollComments() {
+    if (disposed || commentPollInFlight || !isShowing()) {
+      return;
+    }
+    commentPollInFlight = true;
+    new SwingWorker<ArrayList<CommentView>, Void>() {
+      @Override
+      protected ArrayList<CommentView> doInBackground() {
+        return gateway.loadCommentsAfter(task, lastCommentId);
+      }
+
+      @Override
+      protected void done() {
+        try {
+          ArrayList<CommentView> fresh = get();
+          if (!disposed && commentsPanel != null) {
+            commentsPanel.appendComments(fresh);
+            lastCommentId = Math.max(lastCommentId, maxCommentId(fresh));
+          }
+        } catch (InterruptedException ex) {
+          Thread.currentThread().interrupt();
+        } catch (java.util.concurrent.ExecutionException ex) {
+          // Auto refresh im lặng; lỗi gửi bình luận đã được xử lý riêng.
+        } finally {
+          commentPollInFlight = false;
+        }
+      }
+    }.execute();
+  }
+
+  private static int maxCommentId(List<CommentView> comments) {
+    int max = 0;
+    if (comments != null) {
+      for (CommentView comment : comments) {
+        if (comment != null) {
+          max = Math.max(max, comment.id());
+        }
+      }
+    }
+    return max;
+  }
+
+  @Override
+  public void setVisible(boolean visible) {
+    if (visible) {
+      disposed = false;
+      commentPollTimer.start();
+      super.setVisible(true);
+      if (isModal()) {
+        // Modal setVisible chỉ trả về khi dialog đã đóng.
+        commentPollTimer.stop();
+      }
+    } else {
+      super.setVisible(false);
+      commentPollTimer.stop();
+    }
+  }
+
+  @Override
+  public void dispose() {
+    disposed = true;
+    if (commentPollTimer != null) {
+      commentPollTimer.stop();
+    }
+    super.dispose();
   }
 
   private void deleteTask() {

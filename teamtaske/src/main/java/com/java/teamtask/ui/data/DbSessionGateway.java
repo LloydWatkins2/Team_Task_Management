@@ -9,6 +9,7 @@ import com.java.teamtask.elements.seeProjects;
 import com.java.teamtask.elements.system;
 import com.java.teamtask.elements.tasks;
 import com.java.teamtask.elements.users;
+import com.java.teamtask.ui.components.TaskCard;
 import com.zaxxer.hikari.HikariDataSource;
 
 import java.sql.Connection;
@@ -208,6 +209,23 @@ public final class DbSessionGateway extends SessionGateway {
   }
 
   @Override
+  public ArrayList<CommentView> loadCommentsAfter(tasks task, int afterCommentId) {
+    ArrayList<CommentView> result = new ArrayList<>();
+    if (task == null) {
+      return result;
+    }
+    try (Connection conn = open()) {
+      for (SQL.CommentRow row :
+          SQL.selectCommentsByTaskAfter(conn, task.getTaskid(), afterCommentId)) {
+        result.add(UiMapper.commentView(row));
+      }
+      return result;
+    } catch (SQLException e) {
+      throw new DataAccessException("Không thể tải bình luận mới.", e);
+    }
+  }
+
+  @Override
   public boolean addComment(seeProjects role, tasks task, String text) {
     if (role == null || task == null || Validators.blank(text)) {
       return false;
@@ -217,6 +235,51 @@ public final class DbSessionGateway extends SessionGateway {
       return true;
     } catch (SQLException e) {
       throw new DataAccessException("Không thể gửi bình luận.", e);
+    }
+  }
+
+  @Override
+  public MemberInfoView loadMemberInfo(seeProjects role, projectsAssignments member) {
+    if (role == null || member == null || member.getUser() == null) {
+      return null;
+    }
+    try (Connection conn = open()) {
+      projectsAssignments info = role.viewMemberInfo(conn, member.getUser());
+      if (info == null || info.getUser() == null || info.getProject() == null) {
+        return null;
+      }
+      members target = new members(info.getUser(), info.getProject());
+      Double rawProgress = role.viewMemberProgress(conn, target);
+      double progress =
+          rawProgress == null ? 0.0 : Math.max(0.0, Math.min(1.0, rawProgress));
+
+      ArrayList<MemberTaskView> related = new ArrayList<>();
+      int done = 0;
+      ArrayList<tasks> projectTasks = info.getProject().getTasksList();
+      if (projectTasks != null) {
+        for (tasks task : projectTasks) {
+          if (task == null
+              || task.getAssginee() == null
+              || task.getAssginee().userId != info.getUser().userId) {
+            continue;
+          }
+          TaskCard.Status status = UiMapper.statusOf(task.getTaskStatus());
+          related.add(new MemberTaskView(task.getTaskName(), status));
+          if (status == TaskCard.Status.DONE) {
+            done++;
+          }
+        }
+      }
+      return new MemberInfoView(
+          info.getUser(),
+          info.getRole(),
+          info.getAssignedAt(),
+          progress,
+          done,
+          related.size(),
+          related);
+    } catch (SQLException e) {
+      throw new DataAccessException("Không thể tải thông tin thành viên.", e);
     }
   }
 

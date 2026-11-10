@@ -96,6 +96,9 @@ public class SQL {
       for (String sql : tables) {
         st.execute(sql);
       }
+      st.execute(
+          "CREATE INDEX IF NOT EXISTS idx_comments_task_comment "
+              + "ON comments(taskid, commentid)");
     } catch (SQLException e) {
       System.out.println("Loi tao bang: " + e.getMessage());
     }
@@ -343,22 +346,48 @@ public class SQL {
       stmt.setInt(1, taskId);
       try (ResultSet rs = stmt.executeQuery()) {
         while (rs.next()) {
-          users author =
-              new users(
-                  rs.getInt("uid"),
-                  rs.getString("lname"),
-                  rs.getString("fname"),
-                  rs.getString("username"),
-                  rs.getString("password"),
-                  rs.getString("gmail"),
-                  rs.getString("phone"),
-                  Dates.formatUi(rs.getDate("dob")));
-          list.add(
-              new CommentRow(rs.getInt("commentid"), author, rs.getString("commentdetail")));
+          list.add(readCommentRow(rs));
         }
       }
     }
     return list;
+  }
+
+  /** Chỉ lấy bình luận mới hơn mốc id, phục vụ poll 1 giây. */
+  public static ArrayList<CommentRow> selectCommentsByTaskAfter(
+      Connection conn, int taskId, int afterCommentId) throws SQLException {
+    String sql =
+        "SELECT c.commentid, c.commentdetail, "
+            + "u.id AS uid, u.lname, u.fname, u.username, u.password, u.gmail, u.phone, u.dob "
+            + "FROM comments c "
+            + "JOIN users u ON c.fromwhom = u.id "
+            + "WHERE c.taskid = ? AND c.commentid > ? "
+            + "ORDER BY c.commentid";
+    ArrayList<CommentRow> list = new ArrayList<>();
+    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+      stmt.setInt(1, taskId);
+      stmt.setInt(2, Math.max(0, afterCommentId));
+      try (ResultSet rs = stmt.executeQuery()) {
+        while (rs.next()) {
+          list.add(readCommentRow(rs));
+        }
+      }
+    }
+    return list;
+  }
+
+  private static CommentRow readCommentRow(ResultSet rs) throws SQLException {
+    users author =
+        new users(
+            rs.getInt("uid"),
+            rs.getString("lname"),
+            rs.getString("fname"),
+            rs.getString("username"),
+            rs.getString("password"),
+            rs.getString("gmail"),
+            rs.getString("phone"),
+            Dates.formatUi(rs.getDate("dob")));
+    return new CommentRow(rs.getInt("commentid"), author, rs.getString("commentdetail"));
   }
 
   public static users readUser(ResultSet rs) throws SQLException {

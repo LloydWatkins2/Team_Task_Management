@@ -7,9 +7,13 @@ import com.java.teamtask.elements.projectsAssignments;
 import com.java.teamtask.elements.tasks;
 import com.java.teamtask.ui.Card;
 import com.java.teamtask.ui.components.AppButton;
+import com.java.teamtask.ui.components.AvatarButton;
 import com.java.teamtask.ui.components.FormField;
 import com.java.teamtask.ui.components.ProgressBar;
+import com.java.teamtask.ui.components.TaskCard;
+import com.java.teamtask.ui.data.MemberInfoView;
 import com.java.teamtask.ui.data.UserSession;
+import com.java.teamtask.ui.screens.MemberInfoDialog;
 import com.java.teamtask.ui.screens.ProfileScreen;
 import com.java.teamtask.ui.screens.ProjectDetailScreen;
 import com.java.teamtask.ui.theme.Theme;
@@ -24,6 +28,7 @@ import java.awt.Component;
 import java.awt.Container;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.Window;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -160,6 +165,60 @@ class ProjectFlowTest {
     }
 
     @Test
+    void memberAvatarExposesInfoAndLoadsRelatedTasks() throws Exception {
+        TestGateway gateway = new TestGateway();
+        UserSession session = new UserSession();
+        session.setUser(gateway.an);
+
+        ProjectDetailScreen detail =
+                onEdt(
+                        () -> {
+                            ProjectDetailScreen screen =
+                                    new ProjectDetailScreen(gateway, session, () -> {}, () -> {});
+                            screen.open(gateway.anOwner);
+                            return screen;
+                        });
+
+        AvatarButton avatar =
+                find(detail, AvatarButton.class,
+                        item -> "project.member.avatar.2".equals(item.getName()));
+        assertNotNull(avatar, "Avatar thành viên phải có tên ổn định để mở popup");
+        assertEquals("Xem thông tin Trần Minh", avatar.getToolTipText());
+        assertTrue(avatar.isFocusable(), "Avatar phải truy cập được bằng bàn phím");
+
+        projectsAssignments minhMember = null;
+        for (projectsAssignments assignment : gateway.members) {
+            if (assignment.getUser() != null
+                    && assignment.getUser().userId == gateway.minh.userId
+                    && assignment.getProject() == gateway.website) {
+                minhMember = assignment;
+                break;
+            }
+        }
+        assertNotNull(minhMember);
+
+        MemberInfoView info = gateway.loadMemberInfo(session.getActiveRole(), minhMember);
+        assertNotNull(info);
+        assertEquals(1, info.totalTasks());
+        assertEquals(0, info.doneTasks());
+        assertEquals("Thiết kế trang Tổng quan", info.tasks().get(0).name());
+        assertEquals(TaskCard.Status.IN_PROGRESS, info.tasks().get(0).status());
+
+        SwingUtilities.invokeAndWait(avatar::doClick);
+        MemberInfoDialog popup = waitForMemberInfoDialog(3_000);
+        assertNotNull(popup, "Click avatar phải mở popup thông tin thành viên");
+        try {
+            String text = onEdt(() -> labelText(popup.getContentPane()));
+            assertTrue(text.contains("Trần Minh"));
+            assertTrue(text.contains("Thiết kế trang Tổng quan"));
+            assertTrue(text.contains("ĐANG LÀM"));
+        } finally {
+            SwingUtilities.invokeAndWait(popup::dispose);
+        }
+        assertTrue(gateway.loadMemberInfoCalls > 0);
+    }
+
+    @Test
     void emptyProjectShowsZeroProgress() throws Exception {
         TestGateway gateway = new TestGateway();
         UserSession session = new UserSession();
@@ -265,6 +324,19 @@ class ProjectFlowTest {
 
     private static AppButton findButton(Container root, String text) {
         return find(root, AppButton.class, button -> text.equals(button.getText()));
+    }
+
+    private static MemberInfoDialog waitForMemberInfoDialog(long timeoutMs) throws Exception {
+        long deadline = System.currentTimeMillis() + timeoutMs;
+        while (System.currentTimeMillis() < deadline) {
+            for (Window window : onEdt(Window::getWindows)) {
+                if (window instanceof MemberInfoDialog dialog && dialog.isShowing()) {
+                    return dialog;
+                }
+            }
+            Thread.sleep(25);
+        }
+        return null;
     }
 
     private static String labelText(Container root) {

@@ -6,6 +6,8 @@ import com.java.teamtask.elements.seeProjects;
 import com.java.teamtask.elements.tasks;
 import com.java.teamtask.elements.users;
 import com.java.teamtask.ui.data.CommentView;
+import com.java.teamtask.ui.data.MemberInfoView;
+import com.java.teamtask.ui.data.MemberTaskView;
 import com.java.teamtask.ui.data.ProfileChange;
 import com.java.teamtask.ui.data.Registration;
 import com.java.teamtask.ui.data.SessionGateway;
@@ -38,11 +40,15 @@ final class TestGateway extends SessionGateway {
   int updateProjectCalls;
   int deleteProjectCalls;
   int reloadProjectCalls;
+  int loadCommentsAfterCalls;
+  int loadMemberInfoCalls;
+  int lastCommentsAfterId;
   String lastTaskStatus;
 
   private int nextProjectId = 100;
   private int nextTaskId = 500;
   private int nextUserId = 3;
+  private int nextCommentId = 1;
 
   TestGateway() {
     an =
@@ -297,9 +303,59 @@ final class TestGateway extends SessionGateway {
   }
 
   @Override
+  public ArrayList<CommentView> loadCommentsAfter(tasks task, int afterCommentId) {
+    loadCommentsAfterCalls++;
+    lastCommentsAfterId = afterCommentId;
+    ArrayList<CommentView> result = new ArrayList<>();
+    for (CommentView comment : comments) {
+      if (comment.id() > afterCommentId) {
+        result.add(comment);
+      }
+    }
+    return result;
+  }
+
+  @Override
   public boolean addComment(seeProjects role, tasks task, String text) {
-    comments.add(new CommentView(UiMapper.displayName(an), "", text));
+    comments.add(new CommentView(nextCommentId++, UiMapper.displayName(an), "", text));
     return true;
+  }
+
+  @Override
+  public MemberInfoView loadMemberInfo(seeProjects role, projectsAssignments member) {
+    loadMemberInfoCalls++;
+    if (member == null || member.getUser() == null) {
+      return null;
+    }
+    projects project = projectOf(role);
+    if (project == null) {
+      project = member.getProject();
+    }
+    ArrayList<MemberTaskView> related = new ArrayList<>();
+    int done = 0;
+    if (project != null && project.getTasksList() != null) {
+      for (tasks task : project.getTasksList()) {
+        if (task == null
+            || task.getAssginee() == null
+            || task.getAssginee().userId != member.getUser().userId) {
+          continue;
+        }
+        var status = UiMapper.statusOf(task.getTaskStatus());
+        related.add(new MemberTaskView(task.getTaskName(), status));
+        if (status == com.java.teamtask.ui.components.TaskCard.Status.DONE) {
+          done++;
+        }
+      }
+    }
+    double progress = related.isEmpty() ? 0.0 : (double) done / related.size();
+    return new MemberInfoView(
+        member.getUser(),
+        member.getRole(),
+        member.getAssignedAt(),
+        progress,
+        done,
+        related.size(),
+        related);
   }
 
   @Override

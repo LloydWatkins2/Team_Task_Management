@@ -109,15 +109,15 @@ public class projects {
     this.tasksList = tasksList == null ? new ArrayList<>() : tasksList;
   }
 
-  public tasks getTaskById(int taskId) {
-    for (tasks task : getTasksList()) {
-      if (task.getTaskid() == taskId) {
-        return task;
-      }
-    }
-    return null;
-  }
-
+  // public tasks getTaskById(int taskId) {
+  //   for (tasks task : getTasksList()) {
+  //     if (task.getTaskid() == taskId) {
+  //       return task;
+  //     }
+  //   }
+  //   return null;
+  // }
+  //
   /** Thêm task vào project và database. Trả về task vừa tạo hoặc null nếu lỗi. */
   public tasks addTasks(
       Connection conn,

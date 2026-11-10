@@ -45,7 +45,14 @@ public abstract class SessionGateway {
 
   public abstract ArrayList<CommentView> loadComments(tasks task);
 
+  /** Chỉ tải bình luận có id lớn hơn mốc đã biết, dùng cho auto refresh 1 giây. */
+  public abstract ArrayList<CommentView> loadCommentsAfter(tasks task, int afterCommentId);
+
   public abstract boolean addComment(seeProjects role, tasks task, String text);
+
+  /** Thông tin thành viên + tiến độ, lấy qua logic viewMemberInfo/viewMemberProgress. */
+  public abstract MemberInfoView loadMemberInfo(
+      seeProjects role, projectsAssignments member);
 
   public abstract boolean updateTaskStatus(seeProjects role, tasks task, String status);
 

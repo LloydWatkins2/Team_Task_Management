@@ -108,7 +108,7 @@ class UiSnapshotTest {
                         List.of(
                                 new CommentView("Nguyễn An", "Hôm nay", "Bình luận mẫu"),
                                 new CommentView("Trần Minh", "Hôm qua", "Đã xem, sẽ phản hồi sớm.")),
-                        text -> {}));
+                        text -> true));
         assertDiverse(render(comments, 600, 420, "comments-600"));
     }
 

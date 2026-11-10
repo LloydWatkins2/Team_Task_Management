@@ -7,7 +7,7 @@ import com.java.teamtask.elements.tasks;
 import com.java.teamtask.elements.users;
 import com.java.teamtask.ui.Card;
 import com.java.teamtask.ui.components.AppButton;
-import com.java.teamtask.ui.components.Avatar;
+import com.java.teamtask.ui.components.AvatarButton;
 import com.java.teamtask.ui.components.Badge;
 import com.java.teamtask.ui.components.EmptyState;
 import com.java.teamtask.ui.components.IconButton;
@@ -16,6 +16,7 @@ import com.java.teamtask.ui.components.ProgressBar;
 import com.java.teamtask.ui.components.StackPanel;
 import com.java.teamtask.ui.components.TaskCard;
 import com.java.teamtask.ui.data.DataAccessException;
+import com.java.teamtask.ui.data.MemberInfoView;
 import com.java.teamtask.ui.data.SessionGateway;
 import com.java.teamtask.ui.data.TaskView;
 import com.java.teamtask.ui.data.UiMapper;
@@ -81,6 +82,7 @@ public final class ProjectDetailScreen extends JPanel {
     private seeProjects role;
     private List<projectsAssignments> members = new ArrayList<>();
     private boolean refreshing;
+    private boolean memberInfoLoading;
     private String lastSignature;
 
     public ProjectDetailScreen(
@@ -432,7 +434,14 @@ public final class ProjectDetailScreen extends JPanel {
         card.setBorder(new EmptyBorder(Space.MD, Space.XL, Space.MD, Space.XL));
 
         users user = member.getUser();
-        card.add(new Avatar(UiMapper.displayName(user), 40), BorderLayout.WEST);
+        AvatarButton avatar =
+                new AvatarButton(
+                        UiMapper.displayName(user),
+                        "Xem thông tin " + UiMapper.displayName(user),
+                        44);
+        avatar.setName("project.member.avatar." + (user == null ? "0" : user.userId));
+        avatar.addActionListener(e -> showMemberInfo(member));
+        card.add(avatar, BorderLayout.WEST);
 
         JPanel texts = new JPanel();
         texts.setOpaque(false);
@@ -576,6 +585,42 @@ public final class ProjectDetailScreen extends JPanel {
         } catch (DataAccessException ex) {
             showError(ex.getMessage());
         }
+    }
+
+    private void showMemberInfo(projectsAssignments member) {
+        if (member == null || role == null || project == null || memberInfoLoading) {
+            return;
+        }
+        int projectId = project.getId();
+        Window owner = SwingUtilities.getWindowAncestor(this);
+        memberInfoLoading = true;
+        new SwingWorker<MemberInfoView, Void>() {
+            @Override
+            protected MemberInfoView doInBackground() {
+                return gateway.loadMemberInfo(role, member);
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    MemberInfoView info = get();
+                    if (project == null || project.getId() != projectId) {
+                        return;
+                    }
+                    if (info == null) {
+                        showError("Không thể tải thông tin thành viên.");
+                        return;
+                    }
+                    new MemberInfoDialog(owner, info).setVisible(true);
+                } catch (InterruptedException ex) {
+                    Thread.currentThread().interrupt();
+                } catch (ExecutionException ex) {
+                    showError(messageOf(ex.getCause()));
+                } finally {
+                    memberInfoLoading = false;
+                }
+            }
+        }.execute();
     }
 
     private void deleteProject() {

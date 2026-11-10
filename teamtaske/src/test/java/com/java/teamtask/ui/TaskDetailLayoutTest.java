@@ -1,6 +1,7 @@
 package com.java.teamtask.ui;
 
 import com.java.teamtask.elements.owners;
+import com.java.teamtask.ui.components.AppButton;
 import com.java.teamtask.ui.data.CommentView;
 import com.java.teamtask.ui.screens.CommentsPanel;
 import com.java.teamtask.ui.screens.TaskDetailDialog;
@@ -21,6 +22,8 @@ import java.awt.Rectangle;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Bố cục phần bình luận trong TaskDetailDialog: tiêu đề sát trái, nội dung thụt 1 tab, divider full-width. */
 class TaskDetailLayoutTest {
@@ -59,6 +62,9 @@ class TaskDetailLayoutTest {
       CommentsPanel comments = find(root, CommentsPanel.class);
       assertNotNull(card);
       assertNotNull(comments);
+      assertNull(
+          find(comments, AppButton.class, button -> "Làm mới".equals(button.getText())),
+          "Comments không còn nút Làm mới; refresh do dialog tự động thực hiện");
 
       JLabel title = find(root, JLabel.class, label -> "Bình luận".equals(label.getText()));
       assertNotNull(title, "Phải có tiêu đề Bình luận");
@@ -88,6 +94,122 @@ class TaskDetailLayoutTest {
     } finally {
       SwingUtilities.invokeAndWait(dialog::dispose);
     }
+  }
+
+  @Test
+  void autoRefreshesNewComments() throws Exception {
+    TestGateway gateway = new TestGateway();
+    gateway.comments.add(new CommentView(1, "Nguyễn An", "Hôm nay", "Bình luận đầu"));
+
+    TaskDetailDialog[] holder = new TaskDetailDialog[1];
+    SwingUtilities.invokeAndWait(() -> {
+      TaskDetailDialog dialog =
+          new TaskDetailDialog(
+              null,
+              gateway,
+              new owners(gateway.an, gateway.website, gateway.anOwner),
+              gateway.an,
+              gateway.website.getTasksList().get(0),
+              gateway.website,
+              () -> {});
+      dialog.setModal(false);
+      dialog.setVisible(true);
+      holder[0] = dialog;
+    });
+
+    TaskDetailDialog dialog = holder[0];
+    try {
+      assertTrue(dialog.isShowing());
+      gateway.comments.add(new CommentView(2, "Trần Minh", "", "Bình luận tự động"));
+      waitForCommentsAfter(gateway, 2_500);
+      assertEquals(1, gateway.lastCommentsAfterId);
+      waitForLabel(dialog.getContentPane(), "Bình luận tự động", 1_500);
+    } finally {
+      SwingUtilities.invokeAndWait(dialog::dispose);
+    }
+  }
+
+  @Test
+  void pollingStopsWhenDialogHidden() throws Exception {
+    TestGateway gateway = new TestGateway();
+    gateway.comments.add(new CommentView(1, "Nguyễn An", "", "Bình luận đầu"));
+
+    TaskDetailDialog[] holder = new TaskDetailDialog[1];
+    SwingUtilities.invokeAndWait(() -> {
+      TaskDetailDialog dialog =
+          new TaskDetailDialog(
+              null,
+              gateway,
+              new owners(gateway.an, gateway.website, gateway.anOwner),
+              gateway.an,
+              gateway.website.getTasksList().get(0),
+              gateway.website,
+              () -> {});
+      dialog.setModal(false);
+      dialog.setVisible(true);
+      holder[0] = dialog;
+    });
+
+    TaskDetailDialog dialog = holder[0];
+    try {
+      waitForCommentsAfter(gateway, 2_500);
+      SwingUtilities.invokeAndWait(() -> dialog.setVisible(false));
+      Thread.sleep(200);
+      int callsWhileHidden = gateway.loadCommentsAfterCalls;
+      Thread.sleep(1_300);
+      assertEquals(
+          callsWhileHidden,
+          gateway.loadCommentsAfterCalls,
+          "Timer phải dừng khi dialog ẩn");
+
+      SwingUtilities.invokeAndWait(() -> dialog.setVisible(true));
+      waitForCommentsAfterGreaterThan(gateway, callsWhileHidden, 2_500);
+    } finally {
+      SwingUtilities.invokeAndWait(dialog::dispose);
+    }
+  }
+
+  private static void waitForCommentsAfter(TestGateway gateway, long timeoutMs)
+      throws InterruptedException {
+    waitForCommentsAfterGreaterThan(gateway, 0, timeoutMs);
+  }
+
+  private static void waitForCommentsAfterGreaterThan(
+      TestGateway gateway, int calls, long timeoutMs) throws InterruptedException {
+    long deadline = System.currentTimeMillis() + timeoutMs;
+    while (gateway.loadCommentsAfterCalls <= calls && System.currentTimeMillis() < deadline) {
+      Thread.sleep(25);
+    }
+    assertTrue(
+        gateway.loadCommentsAfterCalls > calls,
+        "Auto refresh phải gọi loadCommentsAfter khi dialog mở");
+  }
+
+  private static void waitForLabel(Container root, String text, long timeoutMs) throws Exception {
+    long deadline = System.currentTimeMillis() + timeoutMs;
+    while (System.currentTimeMillis() < deadline) {
+      boolean[] found = {false};
+      SwingUtilities.invokeAndWait(() -> found[0] = containsText(root, text));
+      if (found[0]) {
+        return;
+      }
+      Thread.sleep(25);
+    }
+    assertTrue(false, "Không thấy bình luận mới sau auto refresh: " + text);
+  }
+
+  private static boolean containsText(Container root, String text) {
+    for (Component child : root.getComponents()) {
+      if (child instanceof JLabel label
+          && label.getText() != null
+          && label.getText().contains(text)) {
+        return true;
+      }
+      if (child instanceof Container container && containsText(container, text)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private static Rectangle toCard(Component component, Card card) {

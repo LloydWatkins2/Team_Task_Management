@@ -76,7 +76,8 @@ public final class UiMapper {
   public static CommentView commentView(SQL.CommentRow row) {
     String author = row == null ? "Người dùng" : displayName(row.author());
     String detail = row == null ? "" : row.detail();
-    return new CommentView(author, "", detail == null ? "" : detail);
+    int id = row == null ? 0 : row.commentId();
+    return new CommentView(id, author, "", detail == null ? "" : detail);
   }
 
   public static java.awt.Color iconBackground(TaskCard.Status status) {
