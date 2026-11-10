@@ -85,7 +85,7 @@ class ShellLayoutTest {
             assertTrue(SwingUtilities.isDescendingFrom(projectNav, projectScroll));
 
             JLabel wordmark = find(sidebar, JLabel.class,
-                    label -> "Uyên Phương".equals(label.getText()));
+                    label -> "Collabify".equals(label.getText()));
             JLabel profileName = find(sidebar, JLabel.class,
                     label -> "Nguyễn An".equals(label.getText()));
             assertNotNull(wordmark, "Sidebar phải hiển thị tên ứng dụng mới");

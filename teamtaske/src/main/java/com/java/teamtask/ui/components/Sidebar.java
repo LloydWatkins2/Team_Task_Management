@@ -42,7 +42,7 @@ public final class Sidebar extends JPanel {
     private final JPanel projectBlock = new JPanel();
     private final JPanel avatarHolder = new JPanel(new BorderLayout());
     private final JLabel userNameLabel = new JLabel();
-    private final JLabel wordmark = new JLabel("Uyên Phương");
+    private final JLabel wordmark = new JLabel("Collabify");
 
     public Sidebar(String userName, Listener listener) {
         this.listener = listener == null ? key -> {
@@ -88,7 +88,7 @@ public final class Sidebar extends JPanel {
         row.setMaximumSize(new Dimension(Integer.MAX_VALUE, UiScale.px(44)));
         row.add(new CircleIconPanel(44, Palette.PRIMARY, "logo", Palette.SHELL), BorderLayout.WEST);
 
-        wordmark.setText("Uyên Phương");
+        wordmark.setText("Collabify");
         wordmark.setFont(Typography.logoSmall());
         wordmark.setForeground(Palette.TEXT);
         row.add(wordmark, BorderLayout.CENTER);

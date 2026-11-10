@@ -80,7 +80,7 @@ public final class RegisterScreen extends GradientPanel {
     logo.setAlignmentX(Component.LEFT_ALIGNMENT);
     logo.setMaximumSize(new Dimension(Integer.MAX_VALUE, UiScale.px(40)));
     logo.add(new CircleIconPanel(40, Palette.PRIMARY, "logo", Palette.SHELL), BorderLayout.WEST);
-    JLabel word = new JLabel("Uyên Phương");
+    JLabel word = new JLabel("Collabify");
     word.setFont(Typography.logo());
     word.setForeground(Palette.TEXT);
     logo.add(word, BorderLayout.CENTER);

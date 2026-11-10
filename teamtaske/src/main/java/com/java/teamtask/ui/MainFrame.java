@@ -66,7 +66,7 @@ public final class MainFrame extends JFrame {
   private boolean appBuilt;
 
   public MainFrame(SessionGateway gateway) {
-    super("Uyên Phương");
+    super("Collabify");
     this.gateway = gateway;
     setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     setSize(1360, 900);
