@@ -4,40 +4,52 @@ import com.java.teamtask.ui.Card;
 import com.java.teamtask.ui.theme.Palette;
 import com.java.teamtask.ui.theme.Space;
 import com.java.teamtask.ui.theme.Typography;
-import com.java.teamtask.ui.theme.UiScale;
 
-import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.Timer;
 import javax.swing.border.EmptyBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import java.awt.BorderLayout;
 import java.awt.Component;
-import java.awt.Dimension;
 
-/** Thanh trên cùng: ô tìm kiếm + chuông thông báo + khối người dùng. */
+/** Thanh trên cùng: ô tìm kiếm dự án + khối người dùng. */
 public final class TopBar extends Card {
+    private static final int SEARCH_DELAY_MS = 180;
+
     private final SearchField search = new SearchField();
-    private final IconButton bell = new IconButton("bell", "Thông báo");
     private final JPanel greeting = new JPanel();
     private final JLabel greetingLabel = new JLabel("Xin chào");
     private final JLabel nameLabel = new JLabel();
     private final JPanel avatarHolder = new JPanel(new BorderLayout());
+    private final Timer searchDebounce = new Timer(SEARCH_DELAY_MS, e -> notifySearch());
+    private Runnable searchListener = () -> {};
 
     public TopBar(String userName) {
         super(new BorderLayout(Space.MD, 0));
         setBorder(new EmptyBorder(Space.MD, Space.XXL, Space.MD, Space.XXL));
         setRadius(com.java.teamtask.ui.theme.Radius.MD);
 
-        bell.setDot(true);
+        searchDebounce.setRepeats(false);
+        search.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                restartSearchDebounce();
+            }
 
-        JPanel actions = new JPanel();
-        actions.setOpaque(false);
-        actions.setLayout(new BoxLayout(actions, BoxLayout.X_AXIS));
-        actions.add(bell);
-        actions.add(Box.createHorizontalStrut(Space.LG));
-        actions.add(divider());
-        actions.add(Box.createHorizontalStrut(Space.LG));
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                restartSearchDebounce();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                restartSearchDebounce();
+            }
+        });
+        search.addActionListener(e -> flushSearch());
 
         greeting.setOpaque(false);
         greeting.setLayout(new BoxLayout(greeting, BoxLayout.Y_AXIS));
@@ -57,28 +69,43 @@ public final class TopBar extends Card {
         avatarHolder.add(new Avatar(userName), BorderLayout.CENTER);
         user.add(avatarHolder, BorderLayout.WEST);
         user.add(greeting, BorderLayout.CENTER);
-        actions.add(user);
 
         add(search, BorderLayout.WEST);
-        add(actions, BorderLayout.EAST);
+        add(user, BorderLayout.EAST);
     }
 
-    private static JPanel divider() {
-        JPanel divider = new JPanel();
-        divider.setOpaque(true);
-        divider.setBackground(Palette.BORDER);
-        divider.setPreferredSize(new Dimension(1, UiScale.px(32)));
-        divider.setMaximumSize(new Dimension(1, UiScale.px(32)));
-        divider.setMinimumSize(new Dimension(1, UiScale.px(32)));
-        return divider;
+    private void restartSearchDebounce() {
+        searchDebounce.restart();
+    }
+
+    /** Gọi listener ngay lập tức, dùng khi người dùng nhấn Enter. */
+    public void flushSearch() {
+        searchDebounce.stop();
+        notifySearch();
+    }
+
+    private void notifySearch() {
+        searchListener.run();
+    }
+
+    /** Đăng ký nhận thay đổi từ khoá; callback đọc giá trị qua {@link #getSearchQuery()}. */
+    public void setSearchListener(Runnable listener) {
+        searchListener = listener == null ? () -> {} : listener;
+    }
+
+    public String getSearchQuery() {
+        return search.getText() == null ? "" : search.getText().trim();
+    }
+
+    /** Xoá từ khoá và thông báo ngay cho listener. */
+    public void clearSearch() {
+        search.setText("");
+        searchDebounce.stop();
+        notifySearch();
     }
 
     public SearchField getSearchField() {
         return search;
-    }
-
-    public IconButton getBellButton() {
-        return bell;
     }
 
     public void setUserName(String userName) {

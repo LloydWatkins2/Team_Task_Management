@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
+import javax.swing.BoxLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -46,7 +47,7 @@ class ComponentRenderTest {
         Dimension outline = onEdt(() -> new AppButton("Huỷ", AppButton.Variant.OUTLINE).getPreferredSize());
         Dimension nav = onEdt(() -> new NavItem("Tổng quan", "dashboard").getPreferredSize());
         Dimension search = onEdt(() -> new SearchField().getPreferredSize());
-        Dimension iconButton = onEdt(() -> new IconButton("bell", "Thông báo").getPreferredSize());
+        Dimension iconButton = onEdt(() -> new IconButton("settings", "Cài đặt").getPreferredSize());
         Dimension avatar = onEdt(() -> new Avatar("Nguyễn An").getPreferredSize());
         Dimension badge = onEdt(() -> new Badge("Đang làm", Badge.Kind.WARNING).getPreferredSize());
 
@@ -57,6 +58,20 @@ class ComponentRenderTest {
         assertEquals(new Dimension(48, 48), iconButton);
         assertEquals(new Dimension(48, 48), avatar);
         assertEquals(28, badge.height);
+    }
+
+    @Test
+    void buttonCannotBeCompressedBelowShadowPad() throws Exception {
+        int height = onEdt(() -> {
+            JPanel column = new JPanel();
+            column.setLayout(new BoxLayout(column, BoxLayout.Y_AXIS));
+            AppButton button = new AppButton("Lưu", AppButton.Variant.PRIMARY);
+            column.add(button);
+            column.setSize(240, 40);
+            column.doLayout();
+            return button.getHeight();
+        });
+        assertEquals(66, height, "BoxLayout không được co nút xuống dưới vùng đệm bóng 18px");
     }
 
     @Test
@@ -113,7 +128,7 @@ class ComponentRenderTest {
                 new AppButton("Huỷ", AppButton.Variant.OUTLINE),
                 new NavItem("Dự án", "projects"),
                 new SearchField(),
-                new IconButton("bell", "Thông báo"),
+                new IconButton("settings", "Cài đặt"),
                 new Avatar("Nguyễn An"),
                 new Badge("Hoàn thành", Badge.Kind.SUCCESS),
                 new TaskCard("Thiết kế trang Tổng quan", "Wireframe và bố cục dashboard",

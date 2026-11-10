@@ -66,7 +66,7 @@ public final class MainFrame extends JFrame {
   private boolean appBuilt;
 
   public MainFrame(SessionGateway gateway) {
-    super("Team Task Managements");
+    super("Uyên Phương");
     this.gateway = gateway;
     setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     setSize(1360, 900);
@@ -94,6 +94,7 @@ public final class MainFrame extends JFrame {
   private void buildApp() {
     sidebar = new Sidebar("", this::navigate);
     topBar = new TopBar("");
+    topBar.setSearchListener(this::onSearchChanged);
 
     dashboard =
         new DashboardScreen(gateway, session, this::openProject, this::syncProjects);
@@ -155,9 +156,19 @@ public final class MainFrame extends JFrame {
   /** Đăng nhập/đăng ký thành công: lưu user đầy đủ từ DB và mở Dashboard. */
   public void signIn(users user) {
     session.setUser(user);
+    topBar.clearSearch();
     syncProjects();
     dashboard.refresh();
     showApp();
+  }
+
+  /** Từ khoá đổi: lọc Dashboard và chuyển về Dashboard nếu đang ở màn hình khác. */
+  private void onSearchChanged() {
+    String query = topBar.getSearchQuery();
+    dashboard.setSearchQuery(query);
+    if (!query.isBlank() && content.getCurrentScreen() != dashboard) {
+      navigate("dashboard");
+    }
   }
 
   void showApp() {
@@ -190,6 +201,7 @@ public final class MainFrame extends JFrame {
     }
     if ("dashboard".equals(key) || "tasks".equals(key) || "projects".equals(key)) {
       leaveProject();
+      dashboard.refresh();
       contentLayout.show(content, "dashboard");
       content.setCurrentScreen(dashboard);
       sidebar.select("tasks".equals(key) ? "tasks" : "dashboard");
@@ -275,6 +287,8 @@ public final class MainFrame extends JFrame {
     sidebar.setProjects(List.of());
     sidebar.setUserName("");
     topBar.setUserName("");
+    topBar.clearSearch();
+    dashboard.refresh();
     showLogin();
   }
 
@@ -328,6 +342,22 @@ public final class MainFrame extends JFrame {
     protected void paintComponent(Graphics g) {
       Graphics2D g2 = (Graphics2D) g.create();
       Painters.antialias(g2);
+      g2.setColor(Palette.CONTENT);
+      g2.fill(roundedPath());
+      g2.dispose();
+    }
+
+    /** Cắt cả nội dung con theo góc bo để nền/card không tràn ra ngoài khung. */
+    @Override
+    public void paint(Graphics g) {
+      Graphics2D g2 = (Graphics2D) g.create();
+      Painters.antialias(g2);
+      g2.clip(roundedPath());
+      super.paint(g2);
+      g2.dispose();
+    }
+
+    private Path2D roundedPath() {
       int w = getWidth();
       int h = getHeight();
       int r = Radius.XL;
@@ -339,9 +369,7 @@ public final class MainFrame extends JFrame {
       path.lineTo(r, h);
       path.quadTo(0, h, 0, h - r);
       path.closePath();
-      g2.setColor(Palette.CONTENT);
-      g2.fill(path);
-      g2.dispose();
+      return path;
     }
   }
 
@@ -357,6 +385,10 @@ public final class MainFrame extends JFrame {
     void setCurrentScreen(Component screen) {
       currentScreen = screen;
       revalidate();
+    }
+
+    Component getCurrentScreen() {
+      return currentScreen;
     }
 
     @Override

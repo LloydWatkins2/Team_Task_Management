@@ -10,7 +10,6 @@ import com.java.teamtask.ui.data.Validators;
 import com.java.teamtask.ui.theme.Palette;
 import com.java.teamtask.ui.theme.Space;
 import com.java.teamtask.ui.theme.Typography;
-import com.java.teamtask.ui.theme.UiScale;
 
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -23,7 +22,6 @@ import javax.swing.border.EmptyBorder;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dialog;
-import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Window;
 import java.awt.event.KeyEvent;
@@ -132,7 +130,7 @@ public final class TaskCreateDialog extends JDialog {
             e -> dispose(),
             KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
             JComponent.WHEN_IN_FOCUSED_WINDOW);
-    setSize(new Dimension(UiScale.px(560), UiScale.px(660)));
+    DialogSizer.fit(this, 560, 660);
     setLocationRelativeTo(owner);
   }
 

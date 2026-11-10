@@ -13,11 +13,10 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 
-/** Nút icon tròn 48px (hoặc ghost), có thể kèm dot thông báo. */
+/** Nút icon tròn 48px (hoặc ghost). */
 public final class IconButton extends JButton {
     private final boolean ghost;
     private final int boxSize;
-    private boolean dot;
 
     public IconButton(String iconName, String tooltip) {
         this(iconName, tooltip, 48, false);
@@ -41,11 +40,6 @@ public final class IconButton extends JButton {
         setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         setBorder(new EmptyBorder(0, 0, 0, 0));
         setHorizontalAlignment(CENTER);
-    }
-
-    public void setDot(boolean dot) {
-        this.dot = dot;
-        repaint();
     }
 
     @Override
@@ -79,18 +73,6 @@ public final class IconButton extends JButton {
         g2.dispose();
 
         super.paintComponent(g);
-
-        if (dot) {
-            Graphics2D d = (Graphics2D) g.create();
-            Painters.antialias(d);
-            int dx = getWidth() - UiScale.px(17);
-            int dy = UiScale.px(6);
-            d.setColor(Palette.CARD);
-            d.fillOval(dx, dy, UiScale.px(13), UiScale.px(13));
-            d.setColor(Palette.DANGER);
-            d.fillOval(dx + UiScale.px(2), dy + UiScale.px(2), UiScale.px(9), UiScale.px(9));
-            d.dispose();
-        }
 
         if (isFocusOwner()) {
             Graphics2D focus = (Graphics2D) g.create();

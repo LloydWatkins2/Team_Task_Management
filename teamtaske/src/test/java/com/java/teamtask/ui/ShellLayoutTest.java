@@ -15,6 +15,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import javax.swing.JComponent;
+import javax.swing.JLabel;
 import javax.swing.JScrollPane;
 import javax.swing.SwingUtilities;
 import java.awt.Component;
@@ -47,13 +48,17 @@ class ShellLayoutTest {
             assertNotNull(appRoot);
             ShellPanel shell = appRoot.getShell();
             Sidebar sidebar = find(shell, Sidebar.class);
-            JScrollPane scroll = find(shell, JScrollPane.class);
             DashboardScreen dashboard = find(shell, DashboardScreen.class);
+            JScrollPane scroll = find(shell, JScrollPane.class,
+                    pane -> SwingUtilities.isDescendingFrom(dashboard, pane));
             assertNotNull(sidebar);
             assertNotNull(scroll);
             assertNotNull(dashboard);
             assertNull(find(shell, TaskFormScreen.class),
                     "Màn hình form cũ không còn nằm trong shell");
+            assertEquals("Uyên Phương", frame.getTitle());
+            assertFalse(sidebar.isOpaque(),
+                    "Sidebar phải trong suốt để repaint không đè lên 2 góc bo trái của shell");
 
             java.awt.Insets page = Layout.pagePadding(appRoot.getWidth());
             assertEquals(Math.min(appRoot.getWidth() - page.left - page.right, Layout.SHELL_MAX_WIDTH),
@@ -67,14 +72,41 @@ class ShellLayoutTest {
 
             NavItem projectNav = findNav(sidebar, "Website Redesign");
             NavItem dashboardNav = findNav(sidebar, "Tổng quan");
-            NavItem projectsNav = findNav(sidebar, "Dự án");
+            NavItem settingsNav = findNav(sidebar, "Hồ sơ");
             assertNotNull(projectNav, "Sidebar phải hiển thị dự án của người dùng");
-            assertNotNull(projectsNav);
             assertNotNull(dashboardNav);
+            assertNotNull(settingsNav);
+            assertNull(findNav(sidebar, "Công việc"), "Menu Công việc đã được bỏ");
+            assertNull(findNav(sidebar, "Lịch"), "Menu Lịch đã được bỏ");
+            assertNull(findNav(sidebar, "Thành viên"), "Menu Thành viên đã được bỏ");
+
+            JScrollPane projectScroll = find(sidebar, JScrollPane.class);
+            assertNotNull(projectScroll, "Danh sách dự án phải nằm trong vùng cuộn");
+            assertTrue(SwingUtilities.isDescendingFrom(projectNav, projectScroll));
+
+            JLabel wordmark = find(sidebar, JLabel.class,
+                    label -> "Uyên Phương".equals(label.getText()));
+            JLabel profileName = find(sidebar, JLabel.class,
+                    label -> "Nguyễn An".equals(label.getText()));
+            assertNotNull(wordmark, "Sidebar phải hiển thị tên ứng dụng mới");
+            assertNotNull(profileName);
+            assertTrue(wordmark.getWidth() >= wordmark.getPreferredSize().width,
+                    "Wordmark không được bị cắt");
+            int profileY = SwingUtilities.convertPoint(profileName, 0, 0, sidebar).y;
+            int projectY = SwingUtilities.convertPoint(projectNav, 0, 0, sidebar).y;
+            NavItem lastProjectNav = findNav(sidebar, "Mobile App");
+            assertNotNull(lastProjectNav);
+            int lastProjectBottom = SwingUtilities.convertPoint(lastProjectNav, 0,
+                    lastProjectNav.getHeight(), sidebar).y;
+            assertTrue(profileY > sidebar.getHeight() - 120,
+                    "Khối hồ sơ phải được ghim ở đáy sidebar");
+            assertTrue(projectY < profileY,
+                    "Danh sách dự án phải nằm phía trên khối hồ sơ");
+            assertTrue(profileY - lastProjectBottom < 90,
+                    "Danh sách dự án phải bám sát khối hồ sơ");
 
             SwingUtilities.invokeAndWait(projectNav::doClick);
             assertTrue(projectNav.isSelected(), "Mục dự án vừa chọn phải giữ trạng thái active");
-            assertFalse(projectsNav.isSelected());
             ProjectDetailScreen detail = find(shell, ProjectDetailScreen.class);
             assertNotNull(detail);
             assertTrue(detail.isVisible(), "Chọn dự án phải mở màn hình chi tiết");
@@ -90,6 +122,8 @@ class ShellLayoutTest {
                 frame.validate();
             });
             assertEquals(220, sidebar.getWidth(), "Dưới 1024px sidebar co còn 220px");
+            assertTrue(projectScroll.isVisible(), "Danh sách dự án vẫn hiển thị ở chế độ compact");
+            assertTrue(projectNav.isVisible());
             page = Layout.pagePadding(appRoot.getWidth());
             assertEquals(Math.min(appRoot.getWidth() - page.left - page.right, Layout.SHELL_MAX_WIDTH),
                     shell.getWidth());

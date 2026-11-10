@@ -108,6 +108,11 @@ public final class Typography {
         return tracked(of(Weight.EXTRABOLD, UiScale.font(30)), -0.03f);
     }
 
+    /** Wordmark nhỏ cho sidebar, tránh tràn khi tên thương hiệu dài. */
+    public static Font logoSmall() {
+        return tracked(of(Weight.EXTRABOLD, UiScale.font(22)), -0.03f);
+    }
+
     private static Font tracked(Font font, float em) {
         return font.deriveFont(Map.of(TextAttribute.TRACKING, em));
     }

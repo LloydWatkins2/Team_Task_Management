@@ -11,16 +11,21 @@ import com.java.teamtask.ui.theme.UiScale;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JViewport;
+import javax.swing.Scrollable;
 import javax.swing.border.EmptyBorder;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Sidebar: logo, menu chính, danh sách dự án động và khối người dùng. */
+/** Sidebar: logo, menu chính, danh sách dự án cuộn được và khối người dùng cố định dưới cùng. */
 public final class Sidebar extends JPanel {
     public interface Listener {
         void onNavigate(String key);
@@ -32,51 +37,48 @@ public final class Sidebar extends JPanel {
     private final Listener listener;
     private final JLabel menuLabel = sectionLabel("MENU");
     private final JLabel projectLabel = sectionLabel("DỰ ÁN");
+    private final JPanel menuPanel = new JPanel();
     private final JPanel projectsPanel = new JPanel();
+    private final JPanel projectBlock = new JPanel();
     private final JPanel avatarHolder = new JPanel(new BorderLayout());
     private final JLabel userNameLabel = new JLabel();
+    private final JLabel wordmark = new JLabel("Uyên Phương");
 
     public Sidebar(String userName, Listener listener) {
         this.listener = listener == null ? key -> {
         } : listener;
-        setOpaque(true);
-        setBackground(Palette.SHELL);
-        setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+        // Trong suốt để mọi lần repaint đều đi qua ShellPanel và giữ 2 góc bo bên trái.
+        setOpaque(false);
+        setLayout(new BorderLayout());
         setPreferredSize(new Dimension(UiScale.px(Layout.SIDEBAR_WIDTH), 0));
         setBorder(new EmptyBorder(Layout.sidebarPadding(Layout.SHELL_MAX_WIDTH)));
 
-        add(logo());
-        add(Box.createVerticalStrut(Space.X5L));
-        add(menuLabel);
-        add(Box.createVerticalStrut(Space.SM));
-
-        addNav("dashboard", "Tổng quan", "dashboard");
-        addNav("tasks", "Công việc", "tasks");
-        addNav("projects", "Dự án", "projects");
-        addNav("calendar", "Lịch", "calendar");
-        addNav("team", "Thành viên", "users");
-        addNav("settings", "Hồ sơ", "user");
-
-        add(Box.createVerticalStrut(Space.X3L));
-        add(divider());
-        add(Box.createVerticalStrut(Space.XXL));
-        add(projectLabel);
-        add(Box.createVerticalStrut(Space.SM));
-
-        projectsPanel.setOpaque(false);
-        projectsPanel.setLayout(new BoxLayout(projectsPanel, BoxLayout.Y_AXIS));
-        projectsPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        projectsPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
-        add(projectsPanel);
-
-        add(Box.createVerticalGlue());
-        add(divider());
-        add(Box.createVerticalStrut(Space.LG));
-        add(userBlock());
+        add(header(), BorderLayout.NORTH);
+        add(projectsScroll(), BorderLayout.CENTER);
+        add(footer(), BorderLayout.SOUTH);
 
         setUserName(userName);
         setProjects(List.of());
         select("dashboard");
+    }
+
+    private JPanel header() {
+        JPanel header = new JPanel();
+        header.setOpaque(false);
+        header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
+        header.add(logo());
+        header.add(Box.createVerticalStrut(Space.X5L));
+        header.add(menuLabel);
+        header.add(Box.createVerticalStrut(Space.SM));
+
+        menuPanel.setOpaque(false);
+        menuPanel.setLayout(new BoxLayout(menuPanel, BoxLayout.Y_AXIS));
+        menuPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        menuPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+        addNav(menuPanel, "dashboard", "Tổng quan", "dashboard");
+        addNav(menuPanel, "settings", "Hồ sơ", "user");
+        header.add(menuPanel);
+        return header;
     }
 
     private JPanel logo() {
@@ -86,11 +88,49 @@ public final class Sidebar extends JPanel {
         row.setMaximumSize(new Dimension(Integer.MAX_VALUE, UiScale.px(44)));
         row.add(new CircleIconPanel(44, Palette.PRIMARY, "logo", Palette.SHELL), BorderLayout.WEST);
 
-        JLabel word = new JLabel("Taskia");
-        word.setFont(Typography.logo());
-        word.setForeground(Palette.TEXT);
-        row.add(word, BorderLayout.CENTER);
+        wordmark.setText("Uyên Phương");
+        wordmark.setFont(Typography.logoSmall());
+        wordmark.setForeground(Palette.TEXT);
+        row.add(wordmark, BorderLayout.CENTER);
         return row;
+    }
+
+    private JScrollPane projectsScroll() {
+        projectBlock.setOpaque(false);
+        projectBlock.setLayout(new BoxLayout(projectBlock, BoxLayout.Y_AXIS));
+        projectBlock.setAlignmentX(Component.LEFT_ALIGNMENT);
+        projectBlock.setBorder(new EmptyBorder(Space.SM, 0, 0, 0));
+        projectBlock.add(divider());
+        projectBlock.add(Box.createVerticalStrut(Space.XXL));
+        projectBlock.add(projectLabel);
+        projectBlock.add(Box.createVerticalStrut(Space.SM));
+
+        projectsPanel.setOpaque(false);
+        projectsPanel.setLayout(new BoxLayout(projectsPanel, BoxLayout.Y_AXIS));
+        projectsPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        projectsPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+        projectBlock.add(projectsPanel);
+
+        JScrollPane scroll = new JScrollPane(new ProjectsView(projectBlock));
+        scroll.setBorder(null);
+        scroll.setOpaque(false);
+        scroll.getViewport().setOpaque(false);
+        scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scroll.getVerticalScrollBar().setUnitIncrement(UiScale.px(18));
+        scroll.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return scroll;
+    }
+
+    private JPanel footer() {
+        JPanel footer = new JPanel();
+        footer.setOpaque(false);
+        footer.setLayout(new BoxLayout(footer, BoxLayout.Y_AXIS));
+        footer.setAlignmentX(Component.LEFT_ALIGNMENT);
+        footer.add(divider());
+        footer.add(Box.createVerticalStrut(Space.LG));
+        footer.add(userBlock());
+        return footer;
     }
 
     private static JLabel sectionLabel(String text) {
@@ -101,7 +141,7 @@ public final class Sidebar extends JPanel {
         return label;
     }
 
-    private void addNav(String key, String text, String icon) {
+    private void addNav(JPanel container, String key, String text, String icon) {
         NavItem item = new NavItem(text, icon);
         item.setAlignmentX(Component.LEFT_ALIGNMENT);
         item.setMaximumSize(new Dimension(Integer.MAX_VALUE, UiScale.px(48)));
@@ -114,8 +154,8 @@ public final class Sidebar extends JPanel {
         group.add(item);
         items.add(item);
         keys.add(key);
-        add(item);
-        add(Box.createVerticalStrut(Space.SM));
+        container.add(item);
+        container.add(Box.createVerticalStrut(Space.SM));
     }
 
     private static JPanel divider() {
@@ -192,6 +232,7 @@ public final class Sidebar extends JPanel {
         boolean visible = projectsPanel.getComponentCount() > 0;
         projectLabel.setVisible(visible);
         projectsPanel.setVisible(visible);
+        projectBlock.setVisible(visible);
         projectsPanel.revalidate();
         projectsPanel.repaint();
         revalidate();
@@ -237,10 +278,45 @@ public final class Sidebar extends JPanel {
         setPreferredSize(new Dimension(
                 UiScale.px(compact ? Layout.SIDEBAR_WIDTH_COMPACT : Layout.SIDEBAR_WIDTH), 0));
         setBorder(new EmptyBorder(Layout.sidebarPadding(compact ? Layout.BP_SM : Layout.SHELL_MAX_WIDTH)));
-        boolean hasProjects = projectsPanel.getComponentCount() > 0;
-        projectLabel.setVisible(!compact && hasProjects);
-        projectsPanel.setVisible(!compact && hasProjects);
+        wordmark.setFont(compact
+                ? Typography.of(Typography.Weight.EXTRABOLD, UiScale.font(20))
+                : Typography.logoSmall());
         revalidate();
         repaint();
+    }
+
+    /** Vùng dự án luôn bám sát khối người dùng khi còn chỗ, cuộn khi danh sách dài. */
+    private static final class ProjectsView extends JPanel implements Scrollable {
+        ProjectsView(JComponent content) {
+            super(new BorderLayout());
+            setOpaque(false);
+            add(content, BorderLayout.SOUTH);
+        }
+
+        @Override
+        public Dimension getPreferredScrollableViewportSize() {
+            return getPreferredSize();
+        }
+
+        @Override
+        public int getScrollableUnitIncrement(Rectangle visibleRect, int orientation, int direction) {
+            return UiScale.px(18);
+        }
+
+        @Override
+        public int getScrollableBlockIncrement(Rectangle visibleRect, int orientation, int direction) {
+            return Math.max(visibleRect.height - 40, 40);
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportWidth() {
+            return true;
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportHeight() {
+            return getParent() instanceof JViewport viewport
+                    && viewport.getHeight() >= getPreferredSize().height;
+        }
     }
 }

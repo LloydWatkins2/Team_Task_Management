@@ -1,8 +1,8 @@
 package com.java.teamtask.ui.screens;
 
 import com.formdev.flatlaf.FlatClientProperties;
+import com.java.teamtask.ui.components.AppButton;
 import com.java.teamtask.ui.components.Avatar;
-import com.java.teamtask.ui.components.IconButton;
 import com.java.teamtask.ui.data.CommentView;
 import com.java.teamtask.ui.theme.Palette;
 import com.java.teamtask.ui.theme.Space;
@@ -75,15 +75,11 @@ public final class CommentsPanel extends JPanel {
     JPanel row = new JPanel(new BorderLayout(Space.SM, 0));
     row.setOpaque(false);
     row.setAlignmentX(Component.LEFT_ALIGNMENT);
-    row.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
     row.add(new Avatar(comment.author(), 32), BorderLayout.WEST);
-
-    JPanel body = new JPanel();
-    body.setOpaque(false);
-    body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
 
     JPanel head = new JPanel(new BorderLayout());
     head.setOpaque(false);
+    head.setAlignmentX(Component.LEFT_ALIGNMENT);
     JLabel author = new JLabel(comment.author());
     author.setFont(Typography.label());
     author.setForeground(Palette.TEXT);
@@ -92,17 +88,26 @@ public final class CommentsPanel extends JPanel {
     time.setForeground(Palette.TEXT_MUTED_STRONG);
     head.add(author, BorderLayout.WEST);
     head.add(time, BorderLayout.EAST);
+    head.setMaximumSize(new Dimension(Integer.MAX_VALUE, head.getPreferredSize().height));
 
     JLabel content =
         new JLabel(
             "<html><div style='width:400px'>" + escape(comment.content()) + "</div></html>");
     content.setFont(Typography.body());
     content.setForeground(Palette.TEXT_MUTED_STRONG);
-    content.setBorder(new EmptyBorder(Space.XXS, 0, 0, 0));
+    content.setAlignmentX(Component.LEFT_ALIGNMENT);
 
+    // Tên người bình luận luôn cách nội dung đúng Space.XS, không phụ thuộc nội dung dài/ngắn.
+    JPanel body = new JPanel();
+    body.setOpaque(false);
+    body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
+    body.setAlignmentX(Component.LEFT_ALIGNMENT);
     body.add(head);
+    body.add(Box.createVerticalStrut(Space.XS));
     body.add(content);
+
     row.add(body, BorderLayout.CENTER);
+    row.setMaximumSize(new Dimension(Integer.MAX_VALUE, row.getPreferredSize().height));
     return row;
   }
 
@@ -117,10 +122,14 @@ public final class CommentsPanel extends JPanel {
     input.setMargin(new java.awt.Insets(0, 20, 0, 20));
     input.addActionListener(e -> send());
 
-    IconButton send = new IconButton("send", "Gửi bình luận");
+    JPanel inputHolder = new JPanel(new BorderLayout());
+    inputHolder.setOpaque(false);
+    inputHolder.add(input, BorderLayout.NORTH);
+
+    AppButton send = new AppButton("Gửi", AppButton.Variant.PRIMARY).withIcon("send");
     send.addActionListener(e -> send());
 
-    row.add(input, BorderLayout.CENTER);
+    row.add(inputHolder, BorderLayout.CENTER);
     row.add(send, BorderLayout.EAST);
     return row;
   }

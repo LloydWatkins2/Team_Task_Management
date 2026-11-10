@@ -15,7 +15,7 @@ public final class SearchField extends JTextField {
         setPreferredSize(new Dimension(UiScale.px(400), UiScale.px(48)));
         setMaximumSize(new Dimension(UiScale.px(400), UiScale.px(48)));
         setMinimumSize(new Dimension(UiScale.px(120), UiScale.px(48)));
-        putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "Tìm kiếm công việc...");
+        putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "Tìm kiếm dự án...");
         putClientProperty(FlatClientProperties.TEXT_FIELD_TRAILING_ICON, Icons.muted("search", 22));
         putClientProperty(FlatClientProperties.STYLE, "arc: 999; focusWidth: 3");
         setMargin(new java.awt.Insets(0, 20, 0, 20));

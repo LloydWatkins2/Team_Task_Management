@@ -18,7 +18,6 @@ import com.java.teamtask.ui.theme.Icons;
 import com.java.teamtask.ui.theme.Palette;
 import com.java.teamtask.ui.theme.Space;
 import com.java.teamtask.ui.theme.Typography;
-import com.java.teamtask.ui.theme.UiScale;
 
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -32,6 +31,7 @@ import javax.swing.KeyStroke;
 import javax.swing.border.EmptyBorder;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dialog;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -74,10 +74,10 @@ public final class TaskDetailDialog extends JDialog {
     setContentPane(root);
 
     Card card = new Card(new BorderLayout(0, Space.XL));
-    card.setBorder(new EmptyBorder(Space.X3L, Space.X3L, Space.X3L, Space.X3L));
+    card.setBorder(new EmptyBorder(Space.X3L, 0, Space.X3L, 0));
     root.add(card, BorderLayout.CENTER);
 
-    card.add(details(), BorderLayout.NORTH);
+    card.add(headerSection(), BorderLayout.NORTH);
     CommentsPanel panel =
         new CommentsPanel(
             gateway.loadComments(task),
@@ -92,8 +92,8 @@ public final class TaskDetailDialog extends JDialog {
               }
             });
     commentsPanel = panel;
-    card.add(commentsPanel, BorderLayout.CENTER);
-    card.add(actions(), BorderLayout.SOUTH);
+    card.add(indented(commentsPanel), BorderLayout.CENTER);
+    card.add(padded(actions()), BorderLayout.SOUTH);
 
     getRootPane()
         .registerKeyboardAction(
@@ -101,8 +101,30 @@ public final class TaskDetailDialog extends JDialog {
             KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
             JComponent.WHEN_IN_FOCUSED_WINDOW);
 
-    setSize(new Dimension(UiScale.px(680), UiScale.px(740)));
+    DialogSizer.fit(this, 680, 740);
     setLocationRelativeTo(owner);
+  }
+
+  private JPanel headerSection() {
+    JPanel section = new JPanel();
+    section.setOpaque(false);
+    section.setLayout(new BoxLayout(section, BoxLayout.Y_AXIS));
+    section.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+    section.add(padded(details()));
+    section.add(Box.createVerticalStrut(Space.LG));
+    section.add(divider());
+
+    JPanel titleRow = new JPanel(new BorderLayout());
+    titleRow.setOpaque(false);
+    titleRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+    titleRow.setBorder(new EmptyBorder(Space.LG, Space.X3L, 0, Space.X3L));
+    JLabel commentTitle = new JLabel("Bình luận");
+    commentTitle.setFont(Typography.h3());
+    commentTitle.setForeground(Palette.TEXT);
+    titleRow.add(commentTitle, BorderLayout.WEST);
+    section.add(titleRow);
+    return section;
   }
 
   private JPanel details() {
@@ -110,9 +132,11 @@ public final class TaskDetailDialog extends JDialog {
     JPanel panel = new JPanel();
     panel.setOpaque(false);
     panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+    panel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
     JPanel head = new JPanel(new BorderLayout(Space.MD, 0));
     head.setOpaque(false);
+    head.setAlignmentX(Component.LEFT_ALIGNMENT);
     head.add(
         new CircleIconPanel(48, view.iconBackground(), view.iconName(), Palette.TEXT),
         BorderLayout.WEST);
@@ -136,6 +160,7 @@ public final class TaskDetailDialog extends JDialog {
 
     JPanel meta = new JPanel(new FlowLayout(FlowLayout.LEFT, Space.XL, 0));
     meta.setOpaque(false);
+    meta.setAlignmentX(Component.LEFT_ALIGNMENT);
     meta.setBorder(new EmptyBorder(Space.SM, 0, 0, 0));
     meta.add(meta("clock", view.deadline(), Palette.TEXT_MUTED_STRONG));
     meta.add(meta("projects", view.projectName(), Palette.TEXT_MUTED_STRONG));
@@ -146,10 +171,12 @@ public final class TaskDetailDialog extends JDialog {
             "<html><div style='width:540px'>" + escape(view.description()) + "</div></html>");
     description.setFont(Typography.body());
     description.setForeground(Palette.TEXT_MUTED_STRONG);
+    description.setAlignmentX(Component.LEFT_ALIGNMENT);
     description.setBorder(new EmptyBorder(Space.MD, 0, 0, 0));
 
     JPanel statusRow = new JPanel(new FlowLayout(FlowLayout.LEFT, Space.SM, 0));
     statusRow.setOpaque(false);
+    statusRow.setAlignmentX(Component.LEFT_ALIGNMENT);
     statusRow.setBorder(new EmptyBorder(Space.MD, 0, 0, 0));
     JLabel statusLabel = new JLabel("Trạng thái");
     statusLabel.setFont(Typography.label());
@@ -184,20 +211,39 @@ public final class TaskDetailDialog extends JDialog {
     panel.add(meta);
     panel.add(description);
     panel.add(statusRow);
-    panel.add(Box.createVerticalStrut(Space.LG));
-    JLabel div = new JLabel();
-    div.setOpaque(true);
-    div.setBackground(Palette.BORDER);
-    div.setPreferredSize(new Dimension(0, 1));
-    div.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
-    div.setAlignmentX(LEFT_ALIGNMENT);
-    panel.add(div);
-    JLabel commentTitle = new JLabel("Bình luận");
-    commentTitle.setFont(Typography.h3());
-    commentTitle.setForeground(Palette.TEXT);
-    commentTitle.setBorder(new EmptyBorder(Space.LG, 0, 0, 0));
-    panel.add(commentTitle);
     return panel;
+  }
+
+  /** Đệm thêm 1 tab (32px) bên trái so với dòng tiêu đề. */
+  private static JComponent indented(JComponent content) {
+    JPanel wrap = new JPanel(new BorderLayout());
+    wrap.setOpaque(false);
+    wrap.setBorder(new EmptyBorder(0, Space.X3L + Space.X4L, 0, Space.X3L));
+    wrap.add(content, BorderLayout.CENTER);
+    return wrap;
+  }
+
+  /** Đệm lề ngang theo padding chuẩn của card. */
+  private static JComponent padded(JComponent content) {
+    JPanel wrap = new JPanel(new BorderLayout());
+    wrap.setOpaque(false);
+    wrap.setBorder(new EmptyBorder(0, Space.X3L, 0, Space.X3L));
+    wrap.setAlignmentX(Component.LEFT_ALIGNMENT);
+    wrap.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+    wrap.add(content, BorderLayout.CENTER);
+    return wrap;
+  }
+
+  /** Đường kẻ ngang kéo hết chiều rộng khung. */
+  private static JPanel divider() {
+    JPanel divider = new JPanel();
+    divider.setOpaque(true);
+    divider.setBackground(Palette.BORDER);
+    divider.setAlignmentX(Component.LEFT_ALIGNMENT);
+    divider.setPreferredSize(new Dimension(Integer.MAX_VALUE, 1));
+    divider.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
+    divider.setMinimumSize(new Dimension(0, 1));
+    return divider;
   }
 
   private void renderStatus() {

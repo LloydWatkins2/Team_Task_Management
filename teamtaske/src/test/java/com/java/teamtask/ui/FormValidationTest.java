@@ -99,6 +99,25 @@ class FormValidationTest {
     }
 
     @Test
+    void dialogsKeepFullShadowPadForActionButtons() throws Exception {
+        ProjectFormDialog projectDialog = onEdt(() ->
+                new ProjectFormDialog(null, "Tạo dự án mới", "", "", null, values -> {}));
+        TaskCreateDialog taskDialog = onEdt(() ->
+                new TaskCreateDialog(null, List.of(), values -> {}));
+        try {
+            SwingUtilities.invokeAndWait(projectDialog::validate);
+            SwingUtilities.invokeAndWait(taskDialog::validate);
+            assertEquals(66, findButton(projectDialog, "Lưu").getHeight(),
+                    "Hộp thoại dự án không được cắt vùng bóng của nút");
+            assertEquals(66, findButton(taskDialog, "Lưu").getHeight(),
+                    "Hộp thoại công việc không được cắt vùng bóng của nút");
+        } finally {
+            SwingUtilities.invokeAndWait(projectDialog::dispose);
+            SwingUtilities.invokeAndWait(taskDialog::dispose);
+        }
+    }
+
+    @Test
     void taskFormRequiresNameDeadlineAndAssignee() throws Exception {
         TaskCreateDialog.Values[] saved = new TaskCreateDialog.Values[1];
         TaskCreateDialog dialog = onEdt(() ->

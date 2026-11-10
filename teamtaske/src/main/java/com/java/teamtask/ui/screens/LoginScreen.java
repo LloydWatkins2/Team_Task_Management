@@ -86,7 +86,7 @@ public final class LoginScreen extends GradientPanel {
     logo.setAlignmentX(Component.LEFT_ALIGNMENT);
     logo.setMaximumSize(new Dimension(Integer.MAX_VALUE, UiScale.px(44)));
     logo.add(new CircleIconPanel(44, Palette.PRIMARY, "logo", Palette.SHELL), BorderLayout.WEST);
-    JLabel word = new JLabel("Taskia");
+    JLabel word = new JLabel("Uyên Phương");
     word.setFont(Typography.logo());
     word.setForeground(Palette.TEXT);
     logo.add(word, BorderLayout.CENTER);

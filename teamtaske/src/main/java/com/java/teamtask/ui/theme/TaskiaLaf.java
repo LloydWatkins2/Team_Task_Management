@@ -3,7 +3,7 @@ package com.java.teamtask.ui.theme;
 import com.formdev.flatlaf.FlatLaf;
 import com.formdev.flatlaf.FlatLightLaf;
 
-/** Look & Feel riêng của Taskia. */
+/** Look & Feel riêng của Uyên Phương. */
 public final class TaskiaLaf extends FlatLightLaf {
     public static boolean setup() {
         return FlatLaf.setup(new TaskiaLaf());
@@ -11,6 +11,6 @@ public final class TaskiaLaf extends FlatLightLaf {
 
     @Override
     public String getName() {
-        return "Taskia Light";
+        return "Uyên Phương Light";
     }
 }

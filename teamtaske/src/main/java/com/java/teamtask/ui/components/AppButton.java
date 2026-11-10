@@ -38,6 +38,7 @@ public class AppButton extends JButton {
         this.variant = variant;
         setFont(Typography.button());
         setForeground(foregroundFor(variant));
+        setOpaque(false);
         setContentAreaFilled(false);
         setBorderPainted(false);
         setFocusPainted(false);
@@ -89,6 +90,12 @@ public class AppButton extends JButton {
         if (block) {
             return new Dimension(Integer.MAX_VALUE, fullHeight());
         }
+        return getPreferredSize();
+    }
+
+    /** Giữ nguyên vùng đệm 18px cho bóng; BoxLayout không được co nút xuống thấp hơn. */
+    @Override
+    public Dimension getMinimumSize() {
         return getPreferredSize();
     }
 
