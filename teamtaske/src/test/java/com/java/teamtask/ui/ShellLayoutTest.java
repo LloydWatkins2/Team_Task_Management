@@ -56,7 +56,7 @@ class ShellLayoutTest {
             assertNotNull(dashboard);
             assertNull(find(shell, TaskFormScreen.class),
                     "Màn hình form cũ không còn nằm trong shell");
-            assertEquals("Uyên Phương", frame.getTitle());
+            assertEquals("Collabify", frame.getTitle());
             assertFalse(sidebar.isOpaque(),
                     "Sidebar phải trong suốt để repaint không đè lên 2 góc bo trái của shell");
 

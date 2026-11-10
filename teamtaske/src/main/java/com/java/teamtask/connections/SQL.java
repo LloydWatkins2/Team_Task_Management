@@ -218,6 +218,51 @@ public class SQL {
     return result;
   }
 
+  /**
+   * Lấy đúng một project liên quan tới user, dùng cho refresh màn hình chi tiết.
+   *
+   * <p>Không tải toàn bộ danh sách project như {@link #selectRelatedProject(Connection, users)}.
+   */
+  public static projectsAssignments selectRelatedProjectById(
+      Connection conn, users user, int projectId) throws SQLException {
+    if (conn == null || user == null) {
+      return null;
+    }
+
+    String projectSql =
+        "SELECT p.projectid, p.name, p.description, p.deadline, p.create_at, p.update_at, "
+            + "pa.role, pa.assignat "
+            + "FROM projects p "
+            + "JOIN projectsassgiments pa ON p.projectid = pa.project_id "
+            + "WHERE pa.user_id = ? AND p.projectid = ? "
+            + "ORDER BY p.deadline NULLS LAST, p.name";
+
+    try (PreparedStatement getProject = conn.prepareStatement(projectSql)) {
+      getProject.setInt(1, user.userId);
+      getProject.setInt(2, projectId);
+      try (ResultSet rs = getProject.executeQuery()) {
+        if (!rs.next()) {
+          return null;
+        }
+        int id = rs.getInt("projectid");
+        projects project =
+            new projects(
+                id,
+                rs.getString("name"),
+                rs.getString("description"),
+                rs.getObject("deadline", LocalDateTime.class),
+                rs.getObject("create_at", LocalDateTime.class),
+                rs.getObject("update_at", LocalDateTime.class),
+                selectTasksByProject(conn, id));
+        return new projectsAssignments(
+            user,
+            project,
+            rs.getObject("assignat", LocalDateTime.class),
+            rs.getString("role"));
+      }
+    }
+  }
+
   public static ArrayList<tasks> selectTasksByProject(Connection conn, int projectId)
       throws SQLException {
     String sql =

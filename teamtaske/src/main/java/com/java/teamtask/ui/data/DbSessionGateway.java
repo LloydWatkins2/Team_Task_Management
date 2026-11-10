@@ -287,13 +287,7 @@ public final class DbSessionGateway extends SessionGateway {
       return null;
     }
     try (Connection conn = open()) {
-      for (projectsAssignments assignment :
-          SQL.selectRelatedProject(conn, user).values()) {
-        if (assignment.getProject() != null && assignment.getProject().getId() == projectId) {
-          return assignment;
-        }
-      }
-      return null;
+      return SQL.selectRelatedProjectById(conn, user, projectId);
     } catch (SQLException e) {
       throw new DataAccessException("Không thể tải lại dự án.", e);
     }

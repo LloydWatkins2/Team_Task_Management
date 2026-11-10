@@ -37,6 +37,7 @@ final class TestGateway extends SessionGateway {
   int profileUpdateCalls;
   int updateProjectCalls;
   int deleteProjectCalls;
+  int reloadProjectCalls;
   String lastTaskStatus;
 
   private int nextProjectId = 100;
@@ -345,6 +346,7 @@ final class TestGateway extends SessionGateway {
 
   @Override
   public projectsAssignments reloadProject(users user, int projectId) {
+    reloadProjectCalls++;
     for (projectsAssignments assignment : loadProjects(user).values()) {
       if (assignment.getProject() != null && assignment.getProject().getId() == projectId) {
         return assignment;
