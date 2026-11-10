@@ -1,17 +1,20 @@
 package com.java.teamtask.ui;
 
 import com.java.teamtask.elements.users;
+import com.java.teamtask.ui.components.Badge;
 import com.java.teamtask.ui.components.ProgressBar;
 import com.java.teamtask.ui.components.TaskCard;
 import com.java.teamtask.ui.data.MemberInfoView;
 import com.java.teamtask.ui.data.MemberTaskView;
 import com.java.teamtask.ui.screens.MemberInfoDialog;
 import com.java.teamtask.ui.theme.Theme;
+import com.java.teamtask.ui.theme.UiScale;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import javax.swing.JLabel;
+import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import java.awt.Component;
 import java.awt.Container;
@@ -75,6 +78,18 @@ class MemberInfoDialogTest {
       assertNull(
           find(root, TaskCard.class, ignored -> true),
           "Popup chỉ hiển thị tên + trạng thái, không dùng card task đầy đủ");
+
+      List<JPanel> rows =
+          findAll(root, JPanel.class).stream()
+              .filter(row -> "member.task.row".equals(row.getName()))
+              .toList();
+      assertEquals(2, rows.size());
+      for (JPanel row : rows) {
+        assertEquals(UiScale.px(36), row.getHeight(), "Các task phải có cùng chiều cao");
+      }
+      for (Badge badge : findAll(root, Badge.class)) {
+        assertEquals(UiScale.px(28), badge.getHeight(), "Status không được bị kéo giãn");
+      }
     } finally {
       SwingUtilities.invokeAndWait(dialog::dispose);
     }

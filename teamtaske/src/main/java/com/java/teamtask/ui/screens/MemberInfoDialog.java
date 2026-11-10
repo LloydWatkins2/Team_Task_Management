@@ -7,6 +7,7 @@ import com.java.teamtask.ui.components.AppButton;
 import com.java.teamtask.ui.components.Avatar;
 import com.java.teamtask.ui.components.Badge;
 import com.java.teamtask.ui.components.ProgressBar;
+import com.java.teamtask.ui.components.StackPanel;
 import com.java.teamtask.ui.data.MemberInfoView;
 import com.java.teamtask.ui.data.MemberTaskView;
 import com.java.teamtask.ui.data.UiMapper;
@@ -30,6 +31,7 @@ import java.awt.Component;
 import java.awt.Dialog;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Window;
 import java.awt.event.KeyEvent;
@@ -205,20 +207,16 @@ public final class MemberInfoDialog extends JDialog {
     title.setForeground(Palette.TEXT);
     panel.add(title, BorderLayout.NORTH);
 
-    JPanel list = new JPanel();
-    list.setOpaque(false);
-    list.setLayout(new BoxLayout(list, BoxLayout.Y_AXIS));
+    StackPanel list = new StackPanel();
     List<MemberTaskView> tasks = info == null ? null : info.tasks();
     if (tasks == null || tasks.isEmpty()) {
       JLabel empty = new JLabel("Chưa được giao công việc nào.");
       empty.setFont(Typography.body());
       empty.setForeground(Palette.TEXT_MUTED_STRONG);
-      empty.setAlignmentX(Component.LEFT_ALIGNMENT);
-      list.add(empty);
+      list.addRow(empty, Space.XS);
     } else {
       for (MemberTaskView task : tasks) {
-        list.add(taskRow(task));
-        list.add(Box.createVerticalStrut(Space.XS));
+        list.addRow(taskRow(task), Space.XS);
       }
     }
 
@@ -238,6 +236,8 @@ public final class MemberInfoDialog extends JDialog {
     JPanel row = new JPanel(new BorderLayout(Space.SM, 0));
     row.setOpaque(false);
     row.setAlignmentX(Component.LEFT_ALIGNMENT);
+    row.setName("member.task.row");
+    row.setPreferredSize(new Dimension(0, UiScale.px(36)));
 
     String taskName = task == null ? "" : safeName(task.name());
     JLabel name = new JLabel(taskName);
@@ -247,9 +247,10 @@ public final class MemberInfoDialog extends JDialog {
     row.add(name, BorderLayout.CENTER);
 
     if (task != null && task.status() != null) {
-      row.add(
-          new Badge(task.status().label, task.status().badge),
-          BorderLayout.EAST);
+      JPanel badgeHolder = new JPanel(new GridBagLayout());
+      badgeHolder.setOpaque(false);
+      badgeHolder.add(new Badge(task.status().label, task.status().badge));
+      row.add(badgeHolder, BorderLayout.EAST);
     }
     return row;
   }

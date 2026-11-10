@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import javax.swing.JLabel;
+import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import java.awt.Component;
 import java.awt.Container;
@@ -60,6 +61,41 @@ class CommentsPanelTest {
         oldContent,
         find(panel, JLabel.class, label -> label == oldContent),
         "Append không được dựng lại comment cũ");
+  }
+
+  @Test
+  void alignsAvatarAndCommentWithAuthor() throws Exception {
+    CommentsPanel[] holder = new CommentsPanel[1];
+    SwingUtilities.invokeAndWait(() -> {
+      holder[0] = new CommentsPanel(
+          List.of(new CommentView(1, "Nguyễn An", "Hôm nay", "Ngắn")), text -> true);
+      holder[0].setSize(600, 420);
+      layoutTree(holder[0]);
+    });
+
+    CommentsPanel panel = holder[0];
+    JPanel row = find(panel, JPanel.class, item -> "comment.row".equals(item.getName()));
+    JLabel avatar = find(panel, JLabel.class, item -> "comment.avatar".equals(item.getName()));
+    JLabel author = find(panel, JLabel.class, item -> "comment.author".equals(item.getName()));
+    JLabel content = find(panel, JLabel.class, item -> "comment.content".equals(item.getName()));
+
+    assertNotNull(row);
+    assertNotNull(avatar);
+    assertNotNull(author);
+    assertNotNull(content);
+    assertEquals(32, avatar.getHeight(), "Avatar không được bị kéo giãn theo chiều cao row");
+    assertEquals(0, avatar.getY());
+    assertEquals(0, author.getY());
+    assertEquals(author.getX(), content.getX(), "Nội dung phải thẳng hàng với tên người dùng");
+  }
+
+  private static void layoutTree(Component component) {
+    if (component instanceof Container container) {
+      container.doLayout();
+      for (Component child : container.getComponents()) {
+        layoutTree(child);
+      }
+    }
   }
 
   private static int occurrences(String text, String needle) {

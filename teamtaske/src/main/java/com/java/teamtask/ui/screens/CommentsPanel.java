@@ -37,6 +37,7 @@ public final class CommentsPanel extends JPanel {
   private final JTextField input = new JTextField();
   private final Function<String, Boolean> onSend;
   private final ArrayList<CommentView> current = new ArrayList<>();
+  private final List<JPanel> commentRows = new ArrayList<>();
   private final List<JLabel> contentLabels = new ArrayList<>();
 
   public CommentsPanel(List<CommentView> comments, Function<String, Boolean> onSend) {
@@ -68,6 +69,7 @@ public final class CommentsPanel extends JPanel {
 
   public void setComments(List<CommentView> comments) {
     current.clear();
+    commentRows.clear();
     contentLabels.clear();
     list.removeAll();
     if (comments == null || comments.isEmpty()) {
@@ -144,12 +146,20 @@ public final class CommentsPanel extends JPanel {
     JPanel row = new JPanel(new BorderLayout(Space.SM, 0));
     row.setOpaque(false);
     row.setAlignmentX(Component.LEFT_ALIGNMENT);
-    row.add(new Avatar(comment.author(), 32), BorderLayout.WEST);
+    row.setName("comment.row");
+
+    JPanel avatarHolder = new JPanel(new BorderLayout());
+    avatarHolder.setOpaque(false);
+    Avatar avatar = new Avatar(comment.author(), 32);
+    avatar.setName("comment.avatar");
+    avatarHolder.add(avatar, BorderLayout.NORTH);
+    row.add(avatarHolder, BorderLayout.WEST);
 
     JPanel head = new JPanel(new BorderLayout());
     head.setOpaque(false);
     head.setAlignmentX(Component.LEFT_ALIGNMENT);
     JLabel author = new JLabel(comment.author());
+    author.setName("comment.author");
     author.setFont(Typography.label());
     author.setForeground(Palette.TEXT);
     JLabel time = new JLabel(comment.time() == null ? "" : comment.time());
@@ -160,6 +170,7 @@ public final class CommentsPanel extends JPanel {
     head.setMaximumSize(new Dimension(Integer.MAX_VALUE, head.getPreferredSize().height));
 
     JLabel content = new JLabel();
+    content.setName("comment.content");
     content.putClientProperty("comment", comment.content());
     content.setFont(Typography.body());
     content.setForeground(Palette.TEXT);
@@ -177,12 +188,17 @@ public final class CommentsPanel extends JPanel {
     body.add(content);
 
     row.add(body, BorderLayout.CENTER);
+    row.setMaximumSize(new Dimension(Integer.MAX_VALUE, row.getPreferredSize().height));
+    commentRows.add(row);
     return row;
   }
 
   private void updateContentWidths() {
     for (JLabel label : contentLabels) {
       updateContentWidth(label);
+    }
+    for (JPanel row : commentRows) {
+      row.setMaximumSize(new Dimension(Integer.MAX_VALUE, row.getPreferredSize().height));
     }
     list.revalidate();
     list.repaint();
