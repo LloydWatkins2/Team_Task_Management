@@ -90,6 +90,13 @@ public final class TaskDetailDialog extends JDialog {
               } catch (DataAccessException ex) {
                 showError(ex.getMessage());
               }
+            },
+            () -> {
+              try {
+                commentsPanel.setComments(gateway.loadComments(task));
+              } catch (DataAccessException ex) {
+                showError(ex.getMessage());
+              }
             });
     commentsPanel = panel;
     card.add(indented(commentsPanel), BorderLayout.CENTER);

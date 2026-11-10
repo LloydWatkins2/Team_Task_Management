@@ -18,9 +18,11 @@ public class SQL {
     config.setJdbcUrl(url);
     config.setUsername(username);
     config.setPassword(password);
-    config.setMaximumPoolSize(10);
-    config.setIdleTimeout(30000);
-    config.setMaxLifetime(1800000);
+    config.setMinimumIdle(5);
+    config.setMaximumPoolSize(20);
+    config.setConnectionTimeout(15000);
+    config.setIdleTimeout(60000);
+    config.setMaxLifetime(300000);
     return new HikariDataSource(config);
   }
 

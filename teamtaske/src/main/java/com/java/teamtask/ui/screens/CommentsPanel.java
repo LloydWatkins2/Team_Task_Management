@@ -21,6 +21,7 @@ import javax.swing.border.EmptyBorder;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -30,9 +31,11 @@ public final class CommentsPanel extends JPanel {
   private final JScrollPane scroll = new JScrollPane(list);
   private final JTextField input = new JTextField();
   private final Consumer<String> onSend;
+  private final Runnable onRefresh;
 
-  public CommentsPanel(List<CommentView> comments, Consumer<String> onSend) {
+  public CommentsPanel(List<CommentView> comments, Consumer<String> onSend, Runnable onRefresh) {
     this.onSend = onSend == null ? text -> {} : onSend;
+    this.onRefresh = onRefresh == null ? () -> {} : onRefresh;
     setOpaque(false);
     setLayout(new BorderLayout(0, Space.MD));
 
@@ -50,6 +53,16 @@ public final class CommentsPanel extends JPanel {
     add(inputRow(), BorderLayout.SOUTH);
 
     setComments(comments);
+  }
+
+  /** Giữ tương thích: overload cũ không có refresh. */
+  public CommentsPanel(List<CommentView> comments, Consumer<String> onSend) {
+    this(comments, onSend, () -> {});
+  }
+
+  /** Gọi khi muốn tải lại bình luận từ bên ngoài. */
+  public void reloadComments() {
+    onRefresh.run();
   }
 
   public void setComments(List<CommentView> comments) {
@@ -129,8 +142,16 @@ public final class CommentsPanel extends JPanel {
     AppButton send = new AppButton("Gửi", AppButton.Variant.PRIMARY).withIcon("send");
     send.addActionListener(e -> send());
 
+    AppButton refresh = new AppButton("Làm mới", AppButton.Variant.OUTLINE).withIcon("refresh");
+    refresh.addActionListener(e -> onRefreshClick());
+
+    JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, Space.XS, 0));
+    right.setOpaque(false);
+    right.add(refresh);
+    right.add(send);
+
     row.add(inputHolder, BorderLayout.CENTER);
-    row.add(send, BorderLayout.EAST);
+    row.add(right, BorderLayout.EAST);
     return row;
   }
 
@@ -142,6 +163,10 @@ public final class CommentsPanel extends JPanel {
     onSend.accept(text);
     input.setText("");
     input.requestFocusInWindow();
+  }
+
+  private void onRefreshClick() {
+    onRefresh.run();
   }
 
   private void scrollToBottom() {
