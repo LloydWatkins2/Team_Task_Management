@@ -5,3 +5,6 @@
 *.ali
 target/
 .env
+
+.opencode/
+docs/
