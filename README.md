@@ -28,8 +28,6 @@ Mục tiêu là cung cấp một công cụ quản lý tác vụ nhóm nhẹ, ch
 | Kiểm thử | JUnit 5 |
 | Biến môi trường | dotenv-java |
 
-> `pom.xml` cũng khai báo driver SQLite, nhưng mã nguồn hiện tại dùng cú pháp PostgreSQL (`BIGSERIAL`, `RETURNING`, …), nên cơ sở dữ liệu được hỗ trợ chính thức là PostgreSQL.
-
 ---
 
 ## 3. Cấu trúc dự án
