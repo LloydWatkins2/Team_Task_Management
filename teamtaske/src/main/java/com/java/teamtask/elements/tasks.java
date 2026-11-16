@@ -34,8 +34,7 @@ public class tasks {
     this.taskDescription = taskDescription;
     this.taskStatus = taskStatus;
     this.taskCreatedAt = taskCreatedAt == null ? LocalDateTime.now() : taskCreatedAt;
-    this.taskLastUpdatedAt =
-        taskLastUpdatedAt == null ? LocalDateTime.now() : taskLastUpdatedAt;
+    this.taskLastUpdatedAt = taskLastUpdatedAt == null ? LocalDateTime.now() : taskLastUpdatedAt;
     this.taskDeadline = taskDeadline;
     this.assginee = assginee;
     this.commentsList = new LinkedHashMap<>();
@@ -141,34 +140,6 @@ public class tasks {
 
   public String viewTaskStatus() {
     return this.taskStatus;
-  }
-
-  public void updatetask(Connection conn, tasks task) {
-    if (conn == null || task == null) {
-      return;
-    }
-    String sql =
-        "UPDATE tasks SET taskname = ?, taskdescription = ?, taskdeadline = ?, "
-            + "taskstatus = ?, tasklastupdatedat = ? WHERE taskid = ?";
-    try (PreparedStatement upt = conn.prepareStatement(sql)) {
-      upt.setString(1, task.taskName);
-      upt.setString(2, task.taskDescription);
-      upt.setTimestamp(3, Timestamp.valueOf(task.taskDeadline));
-      upt.setString(4, task.taskStatus);
-      upt.setTimestamp(5, Timestamp.valueOf(task.taskLastUpdatedAt));
-      upt.setInt(6, this.taskid);
-      upt.executeUpdate();
-      this.taskName = task.taskName;
-      this.taskDescription = task.taskDescription;
-      this.taskDeadline = task.taskDeadline;
-      this.taskStatus = task.taskStatus;
-      this.taskLastUpdatedAt = task.taskLastUpdatedAt;
-      if (task.assginee != null) {
-        this.assginee = task.assginee;
-      }
-    } catch (Exception e) {
-      System.out.println("Lỗi update task: " + e.getMessage());
-    }
   }
 
   /** Cập nhật nhanh trạng thái task. */

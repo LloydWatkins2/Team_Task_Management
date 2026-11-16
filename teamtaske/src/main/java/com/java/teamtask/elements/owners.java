@@ -42,8 +42,7 @@ public class owners implements projectsManage {
     String checkSql =
         "SELECT 1 FROM projectsassgiments "
             + "WHERE user_id = ? AND project_id = ? AND role <> 'owner'";
-    String updateTasksSql =
-        "UPDATE tasks SET user_id = ? WHERE project_id = ? AND user_id = ?";
+    String updateTasksSql = "UPDATE tasks SET user_id = ? WHERE project_id = ? AND user_id = ?";
     String deleteSql =
         "DELETE FROM projectsassgiments "
             + "WHERE user_id = ? AND project_id = ? AND role <> 'owner'";
@@ -90,8 +89,7 @@ public class owners implements projectsManage {
     if (newMember == null || conn == null) {
       return false;
     }
-    String checkSql =
-        "SELECT 1 FROM projectsassgiments WHERE user_id = ? AND project_id = ?";
+    String checkSql = "SELECT 1 FROM projectsassgiments WHERE user_id = ? AND project_id = ?";
     String insertSql =
         "INSERT INTO projectsassgiments(user_id, project_id, role, assignat) "
             + "VALUES(?, ?, 'member', ?)";
@@ -149,21 +147,23 @@ public class owners implements projectsManage {
       String taskDescription,
       LocalDateTime taskDeadline,
       Connection conn) {
-    if (task == null || conn == null) {
+    if (conn == null || task == null) {
       return;
     }
-    LocalDateTime now = LocalDateTime.now();
-    tasks updated =
-        new tasks(
-            task.getTaskid(),
-            taskName == null || taskName.isBlank() ? task.getTaskName() : taskName,
-            taskDescription == null ? task.getTaskDescription() : taskDescription,
-            taskStatus == null || taskStatus.isBlank() ? task.getTaskStatus() : taskStatus,
-            task.getTaskCreatedAt(),
-            now,
-            taskDeadline == null ? task.getTaskDeadline() : taskDeadline,
-            task.getAssginee());
-    task.updatetask(conn, updated);
+    String sql =
+        "UPDATE tasks SET taskname = ?, taskdescription = ?, taskdeadline = ?, "
+            + "taskstatus = ?, tasklastupdatedat = ? WHERE taskid = ?";
+    try (PreparedStatement upt = conn.prepareStatement(sql)) {
+      upt.setString(1, task.taskName);
+      upt.setString(2, task.taskDescription);
+      upt.setTimestamp(3, Timestamp.valueOf(task.taskDeadline));
+      upt.setString(4, task.taskStatus);
+      upt.setTimestamp(5, Timestamp.valueOf(task.taskLastUpdatedAt));
+      upt.setInt(6, task.getTaskid());
+      upt.executeUpdate();
+    } catch (Exception e) {
+      System.out.println("Lỗi update task: " + e.getMessage());
+    }
   }
 
   @Override
@@ -177,10 +177,8 @@ public class owners implements projectsManage {
             + "WHERE projectid = ?";
     LocalDateTime now = LocalDateTime.now();
     String projectName = name == null || name.isBlank() ? this.project.getName() : name;
-    String projectDescription =
-        description == null ? this.project.getDes() : description;
-    LocalDateTime projectDeadline =
-        deadline == null ? this.project.getDL() : deadline;
+    String projectDescription = description == null ? this.project.getDes() : description;
+    LocalDateTime projectDeadline = deadline == null ? this.project.getDL() : deadline;
     try (PreparedStatement stmt = conn.prepareStatement(sql)) {
       stmt.setString(1, projectName);
       stmt.setString(2, projectDescription);
@@ -298,8 +296,7 @@ public class owners implements projectsManage {
     if (task == null || comment == null || comment.isBlank() || conn == null) {
       return;
     }
-    String sql =
-        "INSERT INTO comments(taskid, fromwhom, commentdetail) VALUES(?, ?, ?)";
+    String sql = "INSERT INTO comments(taskid, fromwhom, commentdetail) VALUES(?, ?, ?)";
     try (PreparedStatement ins = conn.prepareStatement(sql)) {
       ins.setInt(1, task.getTaskid());
       ins.setInt(2, this.user.userId);
