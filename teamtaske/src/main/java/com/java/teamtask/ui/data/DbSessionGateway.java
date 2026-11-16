@@ -299,6 +299,24 @@ public final class DbSessionGateway extends SessionGateway {
   }
 
   @Override
+  public boolean updateTask(
+      seeProjects role,
+      tasks task,
+      String name,
+      String status,
+      String description,
+      LocalDateTime deadline) {
+    if (!(role instanceof owners owner) || task == null) {
+      return false;
+    }
+    try (Connection conn = open()) {
+      return owner.updateTask(task, name, status, description, deadline, conn);
+    } catch (SQLException e) {
+      throw new DataAccessException("Không thể cập nhật công việc.", e);
+    }
+  }
+
+  @Override
   public boolean updateProject(
       seeProjects role, String name, String description, LocalDateTime deadline) {
     if (!(role instanceof owners owner)) {

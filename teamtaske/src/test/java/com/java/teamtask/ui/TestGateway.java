@@ -44,6 +44,11 @@ final class TestGateway extends SessionGateway {
   int loadMemberInfoCalls;
   int lastCommentsAfterId;
   String lastTaskStatus;
+  String lastUpdatedTaskName;
+  String lastUpdatedTaskStatus;
+  String lastUpdatedTaskDescription;
+  LocalDateTime lastUpdatedTaskDeadline;
+  int updateTaskCalls;
 
   private int nextProjectId = 100;
   private int nextTaskId = 500;
@@ -361,6 +366,22 @@ final class TestGateway extends SessionGateway {
   @Override
   public boolean updateTaskStatus(seeProjects role, tasks task, String status) {
     lastTaskStatus = status;
+    return true;
+  }
+
+  @Override
+  public boolean updateTask(
+      seeProjects role,
+      tasks task,
+      String name,
+      String status,
+      String description,
+      LocalDateTime deadline) {
+    updateTaskCalls++;
+    lastUpdatedTaskName = name;
+    lastUpdatedTaskStatus = status;
+    lastUpdatedTaskDescription = description;
+    lastUpdatedTaskDeadline = deadline;
     return true;
   }
 

@@ -1,10 +1,12 @@
 package com.java.teamtask.ui;
 
+import com.java.teamtask.elements.tasks;
 import com.java.teamtask.ui.components.AppButton;
 import com.java.teamtask.ui.components.FormField;
 import com.java.teamtask.ui.data.Validators;
 import com.java.teamtask.ui.screens.ProjectFormDialog;
 import com.java.teamtask.ui.screens.TaskCreateDialog;
+import com.java.teamtask.ui.screens.TaskEditDialog;
 import com.java.teamtask.ui.theme.Theme;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -14,6 +16,7 @@ import javax.swing.SwingUtilities;
 import java.awt.Component;
 import java.awt.Container;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
@@ -158,6 +161,67 @@ class FormValidationTest {
         assertEquals(LocalDate.now().plusDays(2), saved[0].deadline().toLocalDate());
         assertEquals(gateway.an, saved[0].assignee());
         assertFalse(fields.get(0).hasError());
+    }
+
+    @Test
+    void editTaskFormPrefillsAndSubmitsDbStatus() throws Exception {
+        LocalDateTime now = LocalDateTime.now();
+        tasks task =
+                new tasks(
+                        7,
+                        "Thiết kế trang chủ",
+                        "Mô tả cũ",
+                        "IN_PROGRESS",
+                        now,
+                        now,
+                        now.plusDays(4),
+                        null);
+        TaskEditDialog.Values[] saved = new TaskEditDialog.Values[1];
+        TaskEditDialog dialog = onEdt(() -> new TaskEditDialog(null, task, values -> saved[0] = values));
+        try {
+            List<FormField> fields = allFields(dialog);
+            assertEquals(4, fields.size(), "Sửa công việc không có trường người phụ trách");
+            assertEquals("Thiết kế trang chủ", fields.get(0).getValue());
+            assertEquals("Mô tả cũ", fields.get(1).getValue());
+            assertEquals("Đang làm", fields.get(3).getValue(), "Trạng thái phải được chọn sẵn");
+
+            SwingUtilities.invokeAndWait(() -> {
+                fields.get(0).setValue("Thiết kế trang chủ mới");
+                fields.get(1).setValue("Mô tả mới");
+                fields.get(2).setValue(Validators.formatDate(LocalDate.now().plusDays(1)));
+                fields.get(3).setSelected("Hoàn thành");
+                findButton(dialog, "Lưu").doClick();
+            });
+
+            assertNotNull(saved[0]);
+            assertEquals("Thiết kế trang chủ mới", saved[0].name());
+            assertEquals("Mô tả mới", saved[0].description());
+            assertEquals("DONE", saved[0].status(), "UI phải lưu status enum tiếng Anh");
+            assertEquals(LocalDate.now().plusDays(1), saved[0].deadline().toLocalDate());
+        } finally {
+            SwingUtilities.invokeAndWait(dialog::dispose);
+        }
+    }
+
+    @Test
+    void editTaskFormKeepsPastDeadlineEditable() throws Exception {
+        LocalDateTime now = LocalDateTime.now();
+        tasks task =
+                new tasks(8, "Việc quá hạn", "Mô tả", "OVERDUE", now, now,
+                        now.minusDays(3), null);
+        TaskEditDialog.Values[] saved = new TaskEditDialog.Values[1];
+        TaskEditDialog dialog = onEdt(() -> new TaskEditDialog(null, task, values -> saved[0] = values));
+        try {
+            List<FormField> fields = allFields(dialog);
+            SwingUtilities.invokeAndWait(
+                    () -> fields.get(2).setValue(Validators.formatDate(LocalDate.now().minusDays(1))));
+            assertFalse(fields.get(2).hasError(), "Task quá hạn vẫn phải sửa được");
+            SwingUtilities.invokeAndWait(() -> findButton(dialog, "Lưu").doClick());
+            assertNotNull(saved[0]);
+            assertEquals("OVERDUE", saved[0].status());
+        } finally {
+            SwingUtilities.invokeAndWait(dialog::dispose);
+        }
     }
 
     private static List<FormField> allFields(JDialog dialog) {

@@ -1,5 +1,6 @@
 package com.java.teamtask.ui;
 
+import com.java.teamtask.elements.members;
 import com.java.teamtask.elements.owners;
 import com.java.teamtask.ui.components.AppButton;
 import com.java.teamtask.ui.data.CommentView;
@@ -93,6 +94,47 @@ class TaskDetailLayoutTest {
           "Khoảng cách tên người bình luận và nội dung phải cố định");
     } finally {
       SwingUtilities.invokeAndWait(dialog::dispose);
+    }
+  }
+
+  @Test
+  void onlyOwnerSeesEditTaskAction() throws Exception {
+    TestGateway gateway = new TestGateway();
+    TaskDetailDialog[] ownerDialog = new TaskDetailDialog[1];
+    TaskDetailDialog[] memberDialog = new TaskDetailDialog[1];
+    SwingUtilities.invokeAndWait(() -> {
+      var task = gateway.website.getTasksList().get(0);
+      ownerDialog[0] =
+          new TaskDetailDialog(
+              null,
+              gateway,
+              new owners(gateway.an, gateway.website, gateway.anOwner),
+              gateway.an,
+              task,
+              gateway.website,
+              () -> {});
+      memberDialog[0] =
+          new TaskDetailDialog(
+              null,
+              gateway,
+              new members(gateway.an, gateway.website),
+              gateway.an,
+              task,
+              gateway.website,
+              () -> {});
+    });
+    try {
+      assertNotNull(
+          find(ownerDialog[0].getContentPane(), AppButton.class,
+              button -> "Sửa công việc".equals(button.getText())),
+          "Owner phải thấy nút sửa công việc");
+      assertNull(
+          find(memberDialog[0].getContentPane(), AppButton.class,
+              button -> "Sửa công việc".equals(button.getText())),
+          "Member không được sửa công việc");
+    } finally {
+      SwingUtilities.invokeAndWait(ownerDialog[0]::dispose);
+      SwingUtilities.invokeAndWait(memberDialog[0]::dispose);
     }
   }
 

@@ -140,7 +140,7 @@ public class owners implements projectsManage {
   }
 
   @Override
-  public void updateTask(
+  public boolean updateTask(
       tasks task,
       String taskName,
       String taskStatus,
@@ -148,22 +148,41 @@ public class owners implements projectsManage {
       LocalDateTime taskDeadline,
       Connection conn) {
     if (conn == null || task == null) {
-      return;
+      return false;
+    }
+    String name = taskName == null || taskName.isBlank() ? task.taskName : taskName.trim();
+    String description = taskDescription == null ? task.taskDescription : taskDescription.trim();
+    String status = taskStatus == null || taskStatus.isBlank() ? task.taskStatus : taskStatus;
+    LocalDateTime now = LocalDateTime.now();
+    LocalDateTime deadline = taskDeadline == null ? task.taskDeadline : taskDeadline;
+    if (deadline == null) {
+      deadline = now;
     }
     String sql =
         "UPDATE tasks SET taskname = ?, taskdescription = ?, taskdeadline = ?, "
             + "taskstatus = ?, tasklastupdatedat = ? WHERE taskid = ?";
     try (PreparedStatement upt = conn.prepareStatement(sql)) {
-      upt.setString(1, task.taskName);
-      upt.setString(2, task.taskDescription);
-      upt.setTimestamp(3, Timestamp.valueOf(task.taskDeadline));
-      upt.setString(4, task.taskStatus);
-      upt.setTimestamp(5, Timestamp.valueOf(task.taskLastUpdatedAt));
+      upt.setString(1, name);
+      upt.setString(2, description);
+      upt.setTimestamp(3, Timestamp.valueOf(deadline));
+      upt.setString(4, status);
+      upt.setTimestamp(5, Timestamp.valueOf(now));
       upt.setInt(6, task.getTaskid());
-      upt.executeUpdate();
-    } catch (Exception e) {
+      if (upt.executeUpdate() == 0) {
+        System.out.println("Không tìm thấy task để cập nhật");
+        return false;
+      }
+    } catch (SQLException e) {
       System.out.println("Lỗi update task: " + e.getMessage());
+      return false;
     }
+    task.taskName = name;
+    task.taskDescription = description;
+    task.taskStatus = status;
+    task.taskDeadline = deadline;
+    task.taskLastUpdatedAt = now;
+    System.out.println("Đã cập nhật task");
+    return true;
   }
 
   @Override

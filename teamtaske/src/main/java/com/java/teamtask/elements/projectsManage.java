@@ -11,7 +11,7 @@ public interface projectsManage extends seeProjects {
 
   void assignTask(tasks task, users assignee, Connection conn);
 
-  void updateTask(
+  boolean updateTask(
       tasks task,
       String taskName,
       String taskStatus,

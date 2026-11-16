@@ -56,6 +56,14 @@ public abstract class SessionGateway {
 
   public abstract boolean updateTaskStatus(seeProjects role, tasks task, String status);
 
+  public abstract boolean updateTask(
+      seeProjects role,
+      tasks task,
+      String name,
+      String status,
+      String description,
+      LocalDateTime deadline);
+
   public abstract boolean updateProject(
       seeProjects role, String name, String description, LocalDateTime deadline);
 

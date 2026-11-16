@@ -29,6 +29,7 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.Timer;
 import javax.swing.border.EmptyBorder;
@@ -57,6 +58,7 @@ public final class TaskDetailDialog extends JDialog {
   private CommentsPanel commentsPanel;
   private final Timer commentPollTimer;
   private final JPanel statusHolder = new JPanel(new FlowLayout(FlowLayout.LEFT, Space.SM, 0));
+  private final JPanel detailsHolder = new JPanel(new BorderLayout());
   private int lastCommentId;
   private boolean commentPollInFlight;
   private boolean disposed;
@@ -117,7 +119,8 @@ public final class TaskDetailDialog extends JDialog {
     section.setLayout(new BoxLayout(section, BoxLayout.Y_AXIS));
     section.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-    section.add(padded(details()));
+    section.add(padded(detailsHolder));
+    renderDetails();
     section.add(Box.createVerticalStrut(Space.LG));
     section.add(divider());
 
@@ -293,6 +296,10 @@ public final class TaskDetailDialog extends JDialog {
     JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, Space.SM, 0));
     left.setOpaque(false);
     if (role instanceof owners) {
+      AppButton edit =
+          new AppButton("Sửa công việc", AppButton.Variant.OUTLINE).withIcon("edit");
+      edit.addActionListener(e -> editTask());
+      left.add(edit);
       AppButton delete =
           new AppButton("Xoá công việc", AppButton.Variant.DANGER_OUTLINE).withIcon("trash");
       delete.addActionListener(e -> deleteTask());
@@ -389,6 +396,41 @@ public final class TaskDetailDialog extends JDialog {
       commentPollTimer.stop();
     }
     super.dispose();
+  }
+
+  private void editTask() {
+    Window owner = SwingUtilities.getWindowAncestor(this);
+    new TaskEditDialog(
+            owner,
+            task,
+            values -> {
+              try {
+                if (gateway.updateTask(
+                    role,
+                    task,
+                    values.name(),
+                    values.status(),
+                    values.description(),
+                    values.deadline())) {
+                  renderDetails();
+                  onChanged.run();
+                } else {
+                  showError("Không thể cập nhật công việc.");
+                }
+              } catch (DataAccessException ex) {
+                showError(ex.getMessage());
+              }
+            })
+        .setVisible(true);
+  }
+
+  /** Dựng lại phần thông tin để phản ánh nội dung vừa sửa. */
+  private void renderDetails() {
+    detailsHolder.setOpaque(false);
+    detailsHolder.removeAll();
+    detailsHolder.add(details(), BorderLayout.CENTER);
+    detailsHolder.revalidate();
+    detailsHolder.repaint();
   }
 
   private void deleteTask() {
